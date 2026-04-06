@@ -2,7 +2,7 @@
 
 **[:gb: English](#what-is-this)** | **[:es: Español](#es-versión-en-español)**
 
-> AI-powered job search pipeline built on Claude Code. Evaluate offers, generate tailored CVs, scan portals, and track everything -- powered by AI agents.
+> AI-powered job search pipeline built for Claude Code first, and adaptable to Codex through the same file-based workflow. Evaluate offers, generate tailored CVs, scan portals, and track everything with AI agents.
 
 ![Claude Code](https://img.shields.io/badge/Claude_Code-000?style=flat&logo=anthropic&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
@@ -64,26 +64,22 @@ cp templates/portals.example.yml portals.yml       # Customize companies
 # 3. Add your CV
 # Create cv.md in the project root with your CV in markdown
 
-# 4. Personalize with Claude
-claude   # Open Claude Code in this directory
-
-# Then ask Claude to adapt the system to you:
-# "Change the archetypes to backend engineering roles"
-# "Translate the modes to English"
-# "Add these 5 companies to portals.yml"
-# "Update my profile with this CV I'm pasting"
+# 4. Open your agent of choice in this directory
+claude   # Claude Code
+# or use Codex in this repo and follow AGENTS.md
 
 # 5. Start using
-# Paste a job URL or run /career-ops
+# Claude: paste a job URL or run /career-ops
+# Codex: ask naturally, e.g. "Evaluate this role" or "Scan these portals"
 ```
 
-> **The system is designed to be customized by Claude itself.** Modes, archetypes, scoring weights, negotiation scripts -- just ask Claude to change them. It reads the same files it uses, so it knows exactly what to edit.
+> **The system is designed to be customized by the agent working in the repo.** Claude Code is the native path, but Codex can use the same files through `AGENTS.md`, `modes/`, and the YAML/Markdown sources of truth.
 
-See [docs/SETUP.md](docs/SETUP.md) for the full setup guide.
+See [docs/SETUP.md](docs/SETUP.md) for setup and [docs/CODEX-COMPATIBILITY.md](docs/CODEX-COMPATIBILITY.md) for the Claude/Codex split.
 
 ## Usage
 
-Career-ops is a single slash command with multiple modes:
+Career-ops is a single slash command with multiple modes in Claude Code:
 
 ```
 /career-ops                → Show all available commands
@@ -100,7 +96,7 @@ Career-ops is a single slash command with multiple modes:
 /career-ops project        → Evaluate a portfolio project
 ```
 
-Or just paste a job URL or description directly -- career-ops auto-detects it and runs the full pipeline.
+Or just paste a job URL or description directly in Claude Code. In Codex, use the same intent in natural language and follow the matching mode file.
 
 ## How It Works
 
@@ -155,7 +151,8 @@ Features: 6 filter tabs, 4 sort modes, grouped/flat view, lazy-loaded previews, 
 
 ```
 career-ops/
-├── CLAUDE.md                    # Agent instructions
+├── CLAUDE.md                    # Claude Code instructions
+├── AGENTS.md                    # Codex and general-agent instructions
 ├── cv.md                        # Your CV (create this)
 ├── article-digest.md            # Your proof points (optional)
 ├── config/

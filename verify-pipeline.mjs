@@ -16,8 +16,9 @@
 
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const CAREER_OPS = new URL('.', import.meta.url).pathname;
+const CAREER_OPS = fileURLToPath(new URL('.', import.meta.url));
 // Support both layouts: data/applications.md (boilerplate) and applications.md (original)
 const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
   ? join(CAREER_OPS, 'data/applications.md')
@@ -28,17 +29,57 @@ const STATES_FILE = existsSync(join(CAREER_OPS, 'templates/states.yml'))
   ? join(CAREER_OPS, 'templates/states.yml')
   : join(CAREER_OPS, 'states.yml');
 
-const CANONICAL_STATUSES = [
-  'evaluada', 'aplicado', 'respondido', 'entrevista',
-  'oferta', 'rechazado', 'descartado', 'no aplicar',
-];
+function loadStateConfig() {
+  if (!existsSync(STATES_FILE)) {
+    return {
+      canonicalStatuses: ['evaluated', 'applied', 'responded', 'interview', 'offer', 'rejected', 'discarded', 'skip'],
+      aliases: {
+        'evaluada': 'evaluated',
+        'aplicado': 'applied',
+        'aplicada': 'applied',
+        'respondido': 'responded',
+        'entrevista': 'interview',
+        'oferta': 'offer',
+        'rechazado': 'rejected',
+        'rechazada': 'rejected',
+        'descartado': 'discarded',
+        'descartada': 'discarded',
+        'no aplicar': 'skip',
+        'no_aplicar': 'skip',
+      },
+    };
+  }
 
-const ALIASES = {
-  'enviada': 'aplicado', 'aplicada': 'aplicado', 'applied': 'aplicado', 'sent': 'aplicado',
-  'cerrada': 'descartado', 'descartada': 'descartado', 'cancelada': 'descartado',
-  'rechazada': 'rechazado',
-  'no_aplicar': 'no aplicar', 'skip': 'no aplicar', 'monitor': 'no aplicar',
-};
+  const labels = [];
+  const aliases = {};
+  const lines = readFileSync(STATES_FILE, 'utf-8').split('\n');
+  let currentLabel = null;
+
+  for (const line of lines) {
+    const labelMatch = line.match(/^\s*label:\s*(.+)$/);
+    if (labelMatch) {
+      currentLabel = labelMatch[1].trim().toLowerCase();
+      labels.push(currentLabel);
+      continue;
+    }
+
+    const aliasMatch = line.match(/^\s*aliases:\s*\[(.*)\]\s*$/);
+    if (aliasMatch && currentLabel) {
+      const rawAliases = aliasMatch[1]
+        .split(',')
+        .map((alias) => alias.trim().toLowerCase())
+        .filter(Boolean);
+
+      for (const alias of rawAliases) {
+        aliases[alias] = currentLabel;
+      }
+    }
+  }
+
+  return { canonicalStatuses: labels, aliases };
+}
+
+const { canonicalStatuses: CANONICAL_STATUSES, aliases: ALIASES } = loadStateConfig();
 
 let errors = 0;
 let warnings = 0;

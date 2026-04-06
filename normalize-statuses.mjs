@@ -13,8 +13,9 @@
 
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 
-const CAREER_OPS = new URL('.', import.meta.url).pathname;
+const CAREER_OPS = fileURLToPath(new URL('.', import.meta.url));
 // Support both layouts: data/applications.md (boilerplate) and applications.md (original)
 const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
   ? join(CAREER_OPS, 'data/applications.md')

@@ -26,23 +26,20 @@
 
 ## North Star -- Target Roles
 
-The skill applies with EQUAL rigor to ALL target roles. None is primary or secondary -- any is a success if comp and growth are right:
+The system should evaluate with real rigor across two active lanes from `config/profile.yml`:
+
+- `Product/frontend upside`
+- `Commerce/Shopify probability`
+
+Do not force a false choice too early. A role can be a success through either lane if comp, quality, and growth are strong enough.
 
 | Archetype | Thematic axes | What they buy |
 |-----------|---------------|---------------|
-| **AI Platform / LLMOps Engineer** | Evaluation, observability, reliability, pipelines | Someone who puts AI in production with metrics |
-| **Agentic Workflows / Automation** | HITL, tooling, orchestration, multi-agent | Someone who builds reliable agent systems |
-| **Technical AI Product Manager** | GenAI/Agents, PRDs, discovery, delivery | Someone who translates business to AI product |
-| **AI Solutions Architect** | Hyperautomation, enterprise, integrations | Someone who designs end-to-end AI architectures |
-| **AI Forward Deployed Engineer** | Client-facing, fast delivery, prototyping | Someone who delivers AI solutions to clients fast |
-| **AI Transformation Lead** | Change management, adoption, org enablement | Someone who leads AI transformation in an org |
-
-<!-- [CUSTOMIZE] Edit the archetypes above to match YOUR target roles.
-     For example, if you're a backend engineer, replace with:
-     - Senior Backend Engineer
-     - Staff Platform Engineer
-     - Engineering Manager
-     etc. -->
+| **Senior Frontend / Product Engineer** | React, TypeScript, UI systems, product collaboration, web application delivery | Someone who ships polished user-facing product surfaces |
+| **Frontend Software Engineer** | Component design, state tradeoffs, debugging, APIs, testing, system-design-lite | Someone credible in modern frontend product teams |
+| **Commerce / Shopify Engineer** | Shopify, Liquid, storefront architecture, integrations, merchant UX | Someone who improves commercial web experiences that drive revenue |
+| **Merchant Platform / Ecommerce Engineer** | Commerce systems, experimentation, analytics, platform tooling, conversion | Someone who connects frontend quality to business impact |
+| **Senior Web Developer** | Responsive implementation, performance, accessibility, stakeholder delivery | Someone who can own broad customer-facing web execution |
 
 ### Adaptive Framing by Archetype
 
@@ -50,14 +47,11 @@ The skill applies with EQUAL rigor to ALL target roles. None is primary or secon
 
 | If the role is... | Emphasize about the candidate... | Proof point sources |
 |-------------------|----------------------------------|---------------------|
-| Platform / LLMOps | Production systems builder, observability, evals, closed-loop | article-digest.md + cv.md |
-| Agentic / Automation | Multi-agent orchestration, HITL, reliability, cost | article-digest.md + cv.md |
-| Technical AI PM | Product discovery, PRDs, metrics, stakeholder mgmt | cv.md + article-digest.md |
-| Solutions Architect | System design, integrations, enterprise-ready | article-digest.md + cv.md |
-| Forward Deployed Engineer | Fast delivery, client-facing, prototype to prod | cv.md + article-digest.md |
-| AI Transformation Lead | Change management, team enablement, adoption | cv.md + article-digest.md |
-
-<!-- [CUSTOMIZE] Map YOUR specific projects/articles to each archetype above -->
+| Senior Frontend / Product Engineer | Practical React and TypeScript fluency, shipped UI, debugging, product collaboration, strong execution | `cv.md` + `article-digest.md` |
+| Frontend Software Engineer | Component boundaries, API and state tradeoffs, product-surface thinking, practical architecture language | `cv.md` + `article-digest.md` |
+| Commerce / Shopify Engineer | Shopify depth, storefront implementation, accessibility, performance, analytics, conversion work | `article-digest.md` + `cv.md` |
+| Merchant Platform / Ecommerce Engineer | Merchant tooling, experimentation, measurement, integrations, commercial reasoning | `article-digest.md` + `cv.md` |
+| Senior Web Developer | Broad frontend delivery, design translation, responsiveness, frontend quality, stakeholder communication | `cv.md` + `article-digest.md` |
 
 ### Exit Narrative (use in ALL framings)
 
@@ -68,20 +62,19 @@ The skill applies with EQUAL rigor to ALL target roles. None is primary or secon
      Read from config/profile.yml → narrative.exit_story -->
 
 Use the candidate's exit story from `config/profile.yml` to frame ALL content:
-- **In PDF Summaries:** Bridge from past to future -- "Now applying the same [skill] to [JD domain]."
-- **In STAR stories:** Reference proof points from article-digest.md
-- **In Draft Answers (Section G):** The transition narrative should appear in the first response.
-- **When the JD asks for "entrepreneurial", "ownership", "builder", "end-to-end":** This is the #1 differentiator. Increase match weight.
+- **In PDF summaries:** bridge from six years of commerce/frontend delivery toward the target role's domain
+- **In STAR stories:** reference proof points from `article-digest.md`
+- **In draft answers:** treat the candidate as a pragmatic senior builder, not a framework ideologue
+- **When the JD asks for "ownership", "builder", "end-to-end", "customer-facing", "performance", "accessibility", or "experimentation":** increase match weight
 
 ### Cross-cutting Advantage
 
-Frame profile as **"Technical builder with real-world proof"** that adapts framing to the role:
-- For PM: "builder who reduces uncertainty with prototypes then productionizes with discipline"
-- For FDE: "builder who delivers fast with observability and metrics from day 1"
-- For SA: "builder who designs end-to-end systems with real integration experience"
-- For LLMOps: "builder who puts AI in production with closed-loop quality systems"
+Frame profile as **"Senior frontend builder with commercial and product judgment"**:
+- For product/frontend roles: "builder who ships polished user-facing work and can explain tradeoffs clearly"
+- For commerce roles: "builder who ties frontend quality to accessibility, performance, analytics, and revenue impact"
+- For hybrid roles: "builder who can move between implementation detail and stakeholder-facing business context"
 
-Convert "builder" into a professional signal, not a "hobby maker". Real proof points make this credible.
+Convert "builder" into a professional signal, not a hobby signal. The profile is strongest when grounded in shipped work and sober execution language.
 
 ### Portfolio as Proof Point (use in high-value applications)
 
@@ -97,20 +90,20 @@ If the candidate has a live demo/dashboard (check profile.yml), offer access in 
 
 ### Comp Intelligence
 
-<!-- [CUSTOMIZE] Research comp ranges for YOUR target roles and update these ranges -->
+Read the search target from `config/profile.yml` first.
 
 **General guidance:**
-- Use WebSearch for current market data (Glassdoor, Levels.fyi, Blind)
-- Frame by role title, not by skills -- titles determine comp bands
-- Contractor rates are typically 30-50% higher than employee base to account for benefits
-- Geographic arbitrage works for remote roles: lower CoL = better net
+- Use current market data for senior frontend, product-web, and commerce-engineering titles
+- Compare the role against the candidate's last known full-time comp context, which was about `$120k` before the March 27, 2026 layoff
+- Treat the low-pay DYODE contractor fallback as an emergency floor, not as healthy market comp
+- Contractor rates should still be materially above employee base to account for benefits and volatility
 
 ### Negotiation Scripts
 
 <!-- [CUSTOMIZE] Adapt these to your situation -->
 
 **Salary expectations (general framework):**
-> "Based on market data for this role, I'm targeting [RANGE from profile.yml]. I'm flexible on structure -- what matters is the total package and the opportunity."
+> "Based on the scope of this role and the current market for senior frontend and commerce-facing positions, I'm targeting [RANGE from profile.yml]. I'm flexible on structure, but I care about the overall package and the quality of the opportunity."
 
 **Geographic discount pushback:**
 > "The roles I'm competitive for are output-based, not location-based. My track record doesn't change based on postal code."
@@ -120,15 +113,16 @@ If the candidate has a live demo/dashboard (check profile.yml), offer access in 
 
 ### Location Policy
 
-<!-- [CUSTOMIZE] Adapt to your situation. Read from config/profile.yml → location -->
+Read from `config/profile.yml` first.
 
 **In forms:**
-- Binary "can you be on-site?" questions: follow your actual availability from profile.yml
-- In free-text fields: specify your timezone overlap and availability
+- Binary "can you be on-site?" questions: follow the actual availability in `profile.yml`
+- In free-text fields: specify Central time overlap and selective DFW hybrid availability when relevant
 
 **In evaluations (scoring):**
-- Remote dimension for hybrid outside your country: score **3.0** (not 1.0)
-- Only score 1.0 if JD explicitly says "must be on-site 4-5 days/week, no exceptions"
+- Remote-first is a real preference and should affect scoring
+- Selective DFW hybrid for strong roles should score as viable, not as automatic rejection
+- Only score 1.0 on remote fit when the JD is clearly on-site-heavy with no meaningful flexibility
 
 ### Time-to-offer priority
 - Working demo + metrics > perfection
