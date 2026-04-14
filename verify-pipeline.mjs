@@ -14,11 +14,11 @@
  * Run: node career-ops/verify-pipeline.mjs
  */
 
-import { readFileSync, readdirSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const CAREER_OPS = fileURLToPath(new URL('.', import.meta.url));
+const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
 // Support both layouts: data/applications.md (boilerplate) and applications.md (original)
 const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
   ? join(CAREER_OPS, 'data/applications.md')
@@ -29,57 +29,25 @@ const STATES_FILE = existsSync(join(CAREER_OPS, 'templates/states.yml'))
   ? join(CAREER_OPS, 'templates/states.yml')
   : join(CAREER_OPS, 'states.yml');
 
-function loadStateConfig() {
-  if (!existsSync(STATES_FILE)) {
-    return {
-      canonicalStatuses: ['evaluated', 'applied', 'responded', 'interview', 'offer', 'rejected', 'discarded', 'skip'],
-      aliases: {
-        'evaluada': 'evaluated',
-        'aplicado': 'applied',
-        'aplicada': 'applied',
-        'respondido': 'responded',
-        'entrevista': 'interview',
-        'oferta': 'offer',
-        'rechazado': 'rejected',
-        'rechazada': 'rejected',
-        'descartado': 'discarded',
-        'descartada': 'discarded',
-        'no aplicar': 'skip',
-        'no_aplicar': 'skip',
-      },
-    };
-  }
+// Ensure required directories exist (fresh setup)
+mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
+mkdirSync(REPORTS_DIR, { recursive: true });
 
-  const labels = [];
-  const aliases = {};
-  const lines = readFileSync(STATES_FILE, 'utf-8').split('\n');
-  let currentLabel = null;
+const CANONICAL_STATUSES = [
+  'evaluated', 'applied', 'responded', 'interview',
+  'offer', 'rejected', 'discarded', 'skip',
+];
 
-  for (const line of lines) {
-    const labelMatch = line.match(/^\s*label:\s*(.+)$/);
-    if (labelMatch) {
-      currentLabel = labelMatch[1].trim().toLowerCase();
-      labels.push(currentLabel);
-      continue;
-    }
-
-    const aliasMatch = line.match(/^\s*aliases:\s*\[(.*)\]\s*$/);
-    if (aliasMatch && currentLabel) {
-      const rawAliases = aliasMatch[1]
-        .split(',')
-        .map((alias) => alias.trim().toLowerCase())
-        .filter(Boolean);
-
-      for (const alias of rawAliases) {
-        aliases[alias] = currentLabel;
-      }
-    }
-  }
-
-  return { canonicalStatuses: labels, aliases };
-}
-
-const { canonicalStatuses: CANONICAL_STATUSES, aliases: ALIASES } = loadStateConfig();
+const ALIASES = {
+  'evaluada': 'evaluated', 'condicional': 'evaluated', 'hold': 'evaluated', 'evaluar': 'evaluated', 'verificar': 'evaluated',
+  'aplicado': 'applied', 'enviada': 'applied', 'aplicada': 'applied', 'applied': 'applied', 'sent': 'applied',
+  'respondido': 'responded',
+  'entrevista': 'interview',
+  'oferta': 'offer',
+  'rechazado': 'rejected', 'rechazada': 'rejected',
+  'descartado': 'discarded', 'descartada': 'discarded', 'cerrada': 'discarded', 'cancelada': 'discarded',
+  'no aplicar': 'skip', 'no_aplicar': 'skip', 'monitor': 'skip', 'geo blocker': 'skip',
+};
 
 let errors = 0;
 let warnings = 0;

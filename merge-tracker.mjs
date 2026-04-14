@@ -15,75 +15,26 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, renameSync, existsSync } from 'fs';
-import { execSync } from 'child_process';
-import { join, basename } from 'path';
+import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execFileSync } from 'child_process';
 
-const CAREER_OPS = fileURLToPath(new URL('.', import.meta.url));
+const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
 // Support both layouts: data/applications.md (boilerplate) and applications.md (original)
 const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
   ? join(CAREER_OPS, 'data/applications.md')
   : join(CAREER_OPS, 'applications.md');
 const ADDITIONS_DIR = join(CAREER_OPS, 'batch/tracker-additions');
 const MERGED_DIR = join(ADDITIONS_DIR, 'merged');
-const STATES_FILE = existsSync(join(CAREER_OPS, 'templates/states.yml'))
-  ? join(CAREER_OPS, 'templates/states.yml')
-  : join(CAREER_OPS, 'states.yml');
 const DRY_RUN = process.argv.includes('--dry-run');
 const VERIFY = process.argv.includes('--verify');
 
-function loadStateConfig() {
-  if (!existsSync(STATES_FILE)) {
-    return {
-      labels: ['Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Discarded', 'SKIP'],
-      aliases: {
-        'evaluada': 'Evaluated',
-        'aplicado': 'Applied',
-        'aplicada': 'Applied',
-        'respondido': 'Responded',
-        'entrevista': 'Interview',
-        'oferta': 'Offer',
-        'rechazado': 'Rejected',
-        'rechazada': 'Rejected',
-        'descartado': 'Discarded',
-        'descartada': 'Discarded',
-        'no aplicar': 'SKIP',
-        'no_aplicar': 'SKIP',
-        'skip': 'SKIP',
-      },
-    };
-  }
+// Ensure required directories exist (fresh setup)
+mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
+mkdirSync(ADDITIONS_DIR, { recursive: true });
 
-  const labels = [];
-  const aliases = {};
-  const lines = readFileSync(STATES_FILE, 'utf-8').split('\n');
-  let currentLabel = null;
-
-  for (const line of lines) {
-    const labelMatch = line.match(/^\s*label:\s*(.+)$/);
-    if (labelMatch) {
-      currentLabel = labelMatch[1].trim();
-      labels.push(currentLabel);
-      continue;
-    }
-
-    const aliasMatch = line.match(/^\s*aliases:\s*\[(.*)\]\s*$/);
-    if (aliasMatch && currentLabel) {
-      const rawAliases = aliasMatch[1]
-        .split(',')
-        .map((alias) => alias.trim())
-        .filter(Boolean);
-
-      for (const alias of rawAliases) {
-        aliases[alias.toLowerCase()] = currentLabel;
-      }
-    }
-  }
-
-  return { labels, aliases };
-}
-
-const { labels: CANONICAL_STATES, aliases: STATE_ALIASES } = loadStateConfig();
+// Canonical states and aliases
+const CANONICAL_STATES = ['Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Discarded', 'SKIP'];
 
 function validateStatus(status) {
   const clean = status.replace(/\*\*/g, '').replace(/\s+\d{4}-\d{2}-\d{2}.*$/, '').trim();
@@ -95,24 +46,21 @@ function validateStatus(status) {
 
   // Aliases
   const aliases = {
-    ...STATE_ALIASES,
-    'enviada': 'Applied',
-    'applied': 'Applied',
-    'sent': 'Applied',
-    'cerrada': 'Discarded',
-    'cancelada': 'Discarded',
-    'no aplicar': 'SKIP',
-    'monitor': 'SKIP',
-    'condicional': 'Evaluated',
-    'hold': 'Evaluated',
-    'evaluar': 'Evaluated',
-    'verificar': 'Evaluated',
+    // Spanish → English
+    'evaluada': 'Evaluated', 'condicional': 'Evaluated', 'hold': 'Evaluated', 'evaluar': 'Evaluated', 'verificar': 'Evaluated',
+    'aplicado': 'Applied', 'enviada': 'Applied', 'aplicada': 'Applied', 'applied': 'Applied', 'sent': 'Applied',
+    'respondido': 'Responded',
+    'entrevista': 'Interview',
+    'oferta': 'Offer',
+    'rechazado': 'Rejected', 'rechazada': 'Rejected',
+    'descartado': 'Discarded', 'descartada': 'Discarded', 'cerrada': 'Discarded', 'cancelada': 'Discarded',
+    'no aplicar': 'SKIP', 'no_aplicar': 'SKIP', 'skip': 'SKIP', 'monitor': 'SKIP',
     'geo blocker': 'SKIP',
   };
 
   if (aliases[lower]) return aliases[lower];
 
-  // DUPLICADO/Repost → Descartado
+  // DUPLICADO/Repost → Discarded
   if (/^(duplicado|dup|repost)/i.test(lower)) return 'Discarded';
 
   console.warn(`⚠️  Non-canonical status "${status}" → defaulting to "Evaluated"`);
@@ -196,8 +144,8 @@ function parseTsvContent(content, filename) {
     const col5 = parts[5].trim();
     const col4LooksLikeScore = /^\d+\.?\d*\/5$/.test(col4) || col4 === 'N/A' || col4 === 'DUP';
     const col5LooksLikeScore = /^\d+\.?\d*\/5$/.test(col5) || col5 === 'N/A' || col5 === 'DUP';
-    const col4LooksLikeStatus = /^(evaluada|aplicado|respondido|entrevista|oferta|rechazado|descartado|no aplicar|cerrada|duplicado|repost|condicional|hold|monitor)/i.test(col4);
-    const col5LooksLikeStatus = /^(evaluada|aplicado|respondido|entrevista|oferta|rechazado|descartado|no aplicar|cerrada|duplicado|repost|condicional|hold|monitor)/i.test(col5);
+    const col4LooksLikeStatus = /^(evaluated|applied|responded|interview|offer|rejected|discarded|skip|evaluada|aplicado|respondido|entrevista|oferta|rechazado|descartado|no aplicar|cerrada|duplicado|repost|condicional|hold|monitor)/i.test(col4);
+    const col5LooksLikeStatus = /^(evaluated|applied|responded|interview|offer|rejected|discarded|skip|evaluada|aplicado|respondido|entrevista|oferta|rechazado|descartado|no aplicar|cerrada|duplicado|repost|condicional|hold|monitor)/i.test(col5);
 
     let statusCol, scoreCol;
     if (col4LooksLikeStatus && !col4LooksLikeScore) {
@@ -380,7 +328,7 @@ if (DRY_RUN) console.log('(dry-run — no changes written)');
 if (VERIFY && !DRY_RUN) {
   console.log('\n--- Running verification ---');
   try {
-    execSync(`node ${join(CAREER_OPS, 'verify-pipeline.mjs')}`, { stdio: 'inherit' });
+    execFileSync('node', [join(CAREER_OPS, 'verify-pipeline.mjs')], { stdio: 'inherit' });
   } catch (e) {
     process.exit(1);
   }
