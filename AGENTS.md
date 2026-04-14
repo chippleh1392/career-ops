@@ -62,13 +62,15 @@ When a mode requires shared context, read both:
 
 - Claude-native features:
   - slash-command routing in `.claude/skills/`
-  - `claude -p` workers in `batch/batch-runner.sh`
 - Codex-compatible today:
   - all markdown, YAML, tracker, report, and PDF source files
   - manual or shell-driven execution of evaluations and tracker updates
   - natural-language use of the mode files
-- Codex gap to keep in mind:
-  - the batch runner is Claude-specific and should be treated as a compatibility exception unless replaced
+  - standalone batch processing through `batch/batch-runner.sh --agent codex`
+- Shared batch runner:
+  - `batch/batch-runner.sh --agent claude`
+  - `batch/batch-runner.sh --agent codex`
+  - `batch/batch-runner.sh --agent manual`
 
 ## Tracker rules
 

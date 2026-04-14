@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# career-ops batch runner — standalone orchestrator for claude -p workers
-# Reads batch-input.tsv, delegates each offer to a claude -p worker,
+# career-ops batch runner — standalone orchestrator for Claude, Codex, or manual workers
+# Reads batch-input.tsv, delegates each offer to the selected worker backend,
 # tracks state in batch-state.tsv for resumability.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,8 +11,11 @@ BATCH_DIR="$SCRIPT_DIR"
 INPUT_FILE="$BATCH_DIR/batch-input.tsv"
 STATE_FILE="$BATCH_DIR/batch-state.tsv"
 PROMPT_FILE="$BATCH_DIR/batch-prompt.md"
+OUTPUT_SCHEMA_FILE="$BATCH_DIR/batch-output-schema.json"
+CODEX_RUNNER_PS1="$BATCH_DIR/run-codex-worker.ps1"
 LOGS_DIR="$BATCH_DIR/logs"
 TRACKER_DIR="$BATCH_DIR/tracker-additions"
+MANUAL_DIR="$BATCH_DIR/manual-work-items"
 REPORTS_DIR="$PROJECT_DIR/reports"
 APPLICATIONS_FILE="$PROJECT_DIR/data/applications.md"
 LOCK_FILE="$BATCH_DIR/batch-runner.pid"
@@ -23,15 +26,18 @@ DRY_RUN=false
 RETRY_FAILED=false
 START_FROM=0
 MAX_RETRIES=2
+AGENT_MODE="${BATCH_AGENT:-claude}"
+RESOLVED_AGENT_MODE=""
+AGENT_BIN=""
 
 usage() {
   cat <<'USAGE'
-career-ops batch runner — process job offers in batch via claude -p workers
-Uses your default Claude model (Claude Max subscription).
+career-ops batch runner — process job offers in batch via Claude, Codex, or manual work packets
 
 Usage: batch-runner.sh [OPTIONS]
 
 Options:
+  --agent MODE        Worker backend: claude, codex, manual, auto (default: claude)
   --parallel N         Number of parallel workers (default: 1)
   --dry-run            Show what would be processed, don't execute
   --retry-failed       Only retry offers marked as "failed" in state
@@ -43,12 +49,17 @@ Files:
   batch-input.tsv      Input offers (id, url, source, notes)
   batch-state.tsv      Processing state (auto-managed)
   batch-prompt.md      Prompt template for workers
+  batch-output-schema.json  Codex output contract
   logs/                Per-offer logs
   tracker-additions/   Tracker lines for post-batch merge
+  manual-work-items/   Prepared packets for manual fallback
 
 Examples:
   # Dry run to see pending offers
   ./batch-runner.sh --dry-run
+
+  # Run through Codex CLI
+  ./batch-runner.sh --agent codex
 
   # Process all pending
   ./batch-runner.sh
@@ -64,6 +75,7 @@ USAGE
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --agent) AGENT_MODE="$2"; shift 2 ;;
     --parallel) PARALLEL="$2"; shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
     --retry-failed) RETRY_FAILED=true; shift ;;
@@ -97,6 +109,35 @@ release_lock() {
 
 trap release_lock EXIT
 
+resolve_agent_mode() {
+  case "$AGENT_MODE" in
+    claude|codex|manual)
+      RESOLVED_AGENT_MODE="$AGENT_MODE"
+      ;;
+    auto)
+      if [[ -n "$(resolve_agent_bin "codex")" ]]; then
+        RESOLVED_AGENT_MODE="codex"
+      elif [[ -n "$(resolve_agent_bin "claude")" ]]; then
+        RESOLVED_AGENT_MODE="claude"
+      else
+        RESOLVED_AGENT_MODE="manual"
+      fi
+      ;;
+    *)
+      echo "ERROR: Unsupported agent mode '$AGENT_MODE'. Use claude, codex, manual, or auto."
+      exit 1
+      ;;
+  esac
+}
+
+resolve_agent_bin() {
+  local primary="$1"
+  command -v "$primary" 2>/dev/null \
+    || command -v "${primary}.exe" 2>/dev/null \
+    || command -v "${primary}.cmd" 2>/dev/null \
+    || true
+}
+
 # Validate prerequisites
 check_prerequisites() {
   if [[ ! -f "$INPUT_FILE" ]]; then
@@ -109,12 +150,38 @@ check_prerequisites() {
     exit 1
   fi
 
-  if ! command -v claude &>/dev/null; then
-    echo "ERROR: 'claude' CLI not found in PATH."
+  if [[ ! -f "$OUTPUT_SCHEMA_FILE" ]]; then
+    echo "ERROR: $OUTPUT_SCHEMA_FILE not found."
     exit 1
   fi
 
-  mkdir -p "$LOGS_DIR" "$TRACKER_DIR" "$REPORTS_DIR"
+  if [[ ! -f "$CODEX_RUNNER_PS1" ]]; then
+    echo "ERROR: $CODEX_RUNNER_PS1 not found."
+    exit 1
+  fi
+
+  resolve_agent_mode
+
+  case "$RESOLVED_AGENT_MODE" in
+    claude)
+      AGENT_BIN=$(resolve_agent_bin "claude")
+      if [[ -z "$AGENT_BIN" ]]; then
+        echo "ERROR: 'claude' CLI not found in PATH."
+        exit 1
+      fi
+      ;;
+    codex)
+      AGENT_BIN=$(resolve_agent_bin "codex")
+      if [[ -z "$AGENT_BIN" ]]; then
+        echo "ERROR: 'codex' CLI not found in PATH."
+        exit 1
+      fi
+      ;;
+    manual)
+      ;;
+  esac
+
+  mkdir -p "$LOGS_DIR" "$TRACKER_DIR" "$REPORTS_DIR" "$MANUAL_DIR"
 }
 
 # Initialize state file if it doesn't exist
@@ -211,6 +278,96 @@ update_state() {
   mv "$tmp" "$STATE_FILE"
 }
 
+extract_json_field() {
+  local file="$1" field="$2"
+  [[ -f "$file" ]] || return 0
+  local match
+  match=$(grep -oP "\"${field}\":\\s*(\"[^\"]*\"|null|[0-9.]+)" "$file" 2>/dev/null | head -1 || true)
+  if [[ -z "$match" ]]; then
+    return 0
+  fi
+  echo "$match" | sed -E "s/\"${field}\":\\s*//" | sed -E 's/^"//; s/"$//'
+}
+
+to_host_path() {
+  local path="$1"
+  if command -v wslpath &>/dev/null; then
+    wslpath -w "$path"
+  else
+    echo "$path"
+  fi
+}
+
+run_worker() {
+  local resolved_prompt="$1"
+  local prompt="$2"
+  local log_file="$3"
+  local result_file="$4"
+  local manual_dir="$5"
+
+  case "$RESOLVED_AGENT_MODE" in
+    claude)
+      "$AGENT_BIN" -p \
+        --dangerously-skip-permissions \
+        --append-system-prompt-file "$resolved_prompt" \
+        "$prompt" \
+        > "$log_file" 2>&1
+      ;;
+    codex)
+      local codex_bin_host
+      local project_dir_host
+      local output_schema_host
+      local result_file_host
+      local prompt_file_host
+      local codex_runner_host
+      codex_bin_host=$(to_host_path "$AGENT_BIN")
+      project_dir_host=$(to_host_path "$PROJECT_DIR")
+      output_schema_host=$(to_host_path "$OUTPUT_SCHEMA_FILE")
+      result_file_host=$(to_host_path "$result_file")
+      prompt_file_host=$(to_host_path "$resolved_prompt")
+      codex_runner_host=$(to_host_path "$CODEX_RUNNER_PS1")
+
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$codex_runner_host" \
+        -CodexPath "$codex_bin_host" \
+        -ProjectDir "$project_dir_host" \
+        -OutputSchemaFile "$output_schema_host" \
+        -ResultFile "$result_file_host" \
+        -PromptFile "$prompt_file_host" \
+        > "$log_file" 2>&1
+      ;;
+    manual)
+      mkdir -p "$manual_dir"
+      cp "$resolved_prompt" "$manual_dir/prompt.md"
+      cat > "$manual_dir/metadata.json" <<EOF
+{
+  "status": "prepared",
+  "agent": "manual",
+  "instructions": "Open prompt.md in Claude Code or Codex and execute the job manually. Save the final JSON result to result.json and generated outputs to the standard repo paths.",
+  "prepared_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+      cat > "$result_file" <<EOF
+{
+  "status": "prepared",
+  "id": null,
+  "report_num": null,
+  "company": null,
+  "role": null,
+  "score": null,
+  "pdf": null,
+  "report": null,
+  "error": null
+}
+EOF
+      {
+        echo "Prepared manual work item:"
+        echo "  prompt: $manual_dir/prompt.md"
+        echo "  metadata: $manual_dir/metadata.json"
+      } > "$log_file"
+      ;;
+  esac
+}
+
 # Process a single offer
 process_offer() {
   local id="$1" url="$2" source="$3" notes="$4"
@@ -232,7 +389,7 @@ process_offer() {
 
   # Build the prompt with placeholders replaced
   local prompt
-  prompt="Procesa esta oferta de empleo. Ejecuta el pipeline completo: evaluación A-F + report .md + PDF + tracker line."
+  prompt="Process this job posting. Run the full pipeline: A-F evaluation, markdown report, PDF resume, and tracker line."
   prompt="$prompt URL: $url"
   prompt="$prompt JD file: $jd_file"
   prompt="$prompt Report number: $report_num"
@@ -240,6 +397,8 @@ process_offer() {
   prompt="$prompt Batch ID: $id"
 
   local log_file="$LOGS_DIR/${report_num}-${id}.log"
+  local result_file="$LOGS_DIR/${report_num}-${id}.result.json"
+  local manual_dir="$MANUAL_DIR/${report_num}-${id}"
 
   # Prepare system prompt with placeholders resolved
   local resolved_prompt="$BATCH_DIR/.resolved-prompt-${id}.md"
@@ -251,13 +410,8 @@ process_offer() {
     -e "s|{{ID}}|${id}|g" \
     "$PROMPT_FILE" > "$resolved_prompt"
 
-  # Launch claude -p worker (uses default model from Claude Max subscription)
   local exit_code=0
-  claude -p \
-    --dangerously-skip-permissions \
-    --append-system-prompt-file "$resolved_prompt" \
-    "$prompt" \
-    > "$log_file" 2>&1 || exit_code=$?
+  run_worker "$resolved_prompt" "$prompt" "$log_file" "$result_file" "$manual_dir" || exit_code=$?
 
   # Cleanup resolved prompt
   rm -f "$resolved_prompt"
@@ -266,12 +420,25 @@ process_offer() {
   completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
   if [[ $exit_code -eq 0 ]]; then
-    # Try to extract score from worker output
+    local result_source="$result_file"
+    if [[ ! -f "$result_source" || ! -s "$result_source" ]]; then
+      result_source="$log_file"
+    fi
+
+    local worker_status
+    worker_status=$(extract_json_field "$result_source" "status")
+
+    if [[ "$worker_status" == "prepared" ]]; then
+      update_state "$id" "$url" "prepared" "$started_at" "$completed_at" "$report_num" "-" "-" "$retries"
+      echo "    📝 Prepared manual work item (report: $report_num)"
+      return
+    fi
+
     local score="-"
-    local score_match
-    score_match=$(grep -oP '"score":\s*[\d.]+' "$log_file" 2>/dev/null | head -1 | grep -oP '[\d.]+' || true)
-    if [[ -n "$score_match" ]]; then
-      score="$score_match"
+    local score_value
+    score_value=$(extract_json_field "$result_source" "score")
+    if [[ -n "$score_value" && "$score_value" != "null" ]]; then
+      score="$score_value"
     fi
 
     update_state "$id" "$url" "completed" "$started_at" "$completed_at" "$report_num" "$score" "-" "$retries"
@@ -289,10 +456,10 @@ process_offer() {
 merge_tracker() {
   echo ""
   echo "=== Merging tracker additions ==="
-  node "$PROJECT_DIR/career-ops/merge-tracker.mjs"
+  node "$PROJECT_DIR/merge-tracker.mjs"
   echo ""
   echo "=== Verifying pipeline integrity ==="
-  node "$PROJECT_DIR/career-ops/verify-pipeline.mjs" || echo "⚠️  Verification found issues (see above)"
+  node "$PROJECT_DIR/verify-pipeline.mjs" || echo "⚠️  Verification found issues (see above)"
 }
 
 # Print summary
@@ -305,7 +472,7 @@ print_summary() {
     return
   fi
 
-  local total=0 completed=0 failed=0 pending=0
+  local total=0 completed=0 failed=0 prepared=0 pending=0
   local score_sum=0 score_count=0
 
   while IFS=$'\t' read -r sid _ sstatus _ _ _ sscore _ _; do
@@ -318,12 +485,13 @@ print_summary() {
           score_count=$((score_count + 1))
         fi
         ;;
+      prepared) prepared=$((prepared + 1)) ;;
       failed) failed=$((failed + 1)) ;;
       *) pending=$((pending + 1)) ;;
     esac
   done < "$STATE_FILE"
 
-  echo "Total: $total | Completed: $completed | Failed: $failed | Pending: $pending"
+  echo "Total: $total | Completed: $completed | Prepared: $prepared | Failed: $failed | Pending: $pending"
 
   if (( score_count > 0 )); then
     local avg
@@ -353,6 +521,7 @@ main() {
   fi
 
   echo "=== career-ops batch runner ==="
+  echo "Agent: $RESOLVED_AGENT_MODE"
   echo "Parallel: $PARALLEL | Max retries: $MAX_RETRIES"
   echo "Input: $total_input offers"
   echo ""
@@ -389,7 +558,7 @@ main() {
       fi
     else
       # Skip completed offers
-      if [[ "$status" == "completed" ]]; then
+      if [[ "$status" == "completed" || "$status" == "prepared" ]]; then
         continue
       fi
       # Skip failed offers that hit retry limit (unless --retry-failed)

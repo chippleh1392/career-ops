@@ -44,7 +44,8 @@ Built by someone who used it to evaluate 740+ job offers, generate 100+ tailored
 | **Negotiation Scripts** | Salary negotiation frameworks, geographic discount pushback, competing offer leverage |
 | **ATS PDF Generation** | Keyword-injected CVs with Space Grotesk + DM Sans design |
 | **Portal Scanner** | 45+ companies pre-configured (Anthropic, OpenAI, ElevenLabs, Retool, n8n...) + custom queries across Ashby, Greenhouse, Lever, Wellfound |
-| **Batch Processing** | Parallel evaluation with `claude -p` workers |
+| **Batch Processing** | Parallel evaluation with `claude`, `codex`, or prepared manual work packets |
+| **Market Scan Layer** | Import large job datasets from Greenhouse, Lever, Ashby, and browser-scanned career pages; score them lightly, analyze title/remote/salary/source/freshness trends, and hand the top slice into deep evaluation |
 | **Dashboard TUI** | Terminal UI to browse, filter, and sort your pipeline |
 | **Human-in-the-Loop** | AI evaluates and recommends, you decide and act. The system never submits an application -- you always have the final call |
 | **Pipeline Integrity** | Automated merge, dedup, status normalization, health checks |
@@ -71,6 +72,19 @@ claude   # Claude Code
 # 5. Start using
 # Claude: paste a job URL or run /career-ops
 # Codex: ask naturally, e.g. "Evaluate this role" or "Scan these portals"
+```
+
+```bash
+# Optional: standalone batch processing
+bash batch/batch-runner.sh --agent claude
+bash batch/batch-runner.sh --agent codex
+bash batch/batch-runner.sh --agent manual
+```
+
+```bash
+# Optional: market-volume workflow
+npm run market:refresh
+node market-sync-batch.mjs --dry-run --top 10 --min-rating 2.5
 ```
 
 > **The system is designed to be customized by the agent working in the repo.** Claude Code is the native path, but Codex can use the same files through `AGENTS.md`, `modes/`, and the YAML/Markdown sources of truth.
@@ -105,7 +119,7 @@ You paste a job URL or description
         │
         ▼
 ┌──────────────────┐
-│  Archetype       │  Classifies: LLMOps / Agentic / PM / SA / FDE / Transformation
+│  Archetype       │  Classifies: Frontend Product / Frontend SWE / Commerce Shopify / Merchant Platform / Senior Web
 │  Detection       │
 └────────┬─────────┘
          │
@@ -117,8 +131,42 @@ You paste a job URL or description
     ┌────┼────┐
     ▼    ▼    ▼
  Report  PDF  Tracker
-  .md   .pdf   .tsv
+ .md   .pdf   .tsv
 ```
+
+## Market Analysis Workflow
+
+Use this when you want market intelligence from volume before spending time on deep evaluations.
+
+```bash
+npm run market:refresh
+```
+
+This writes:
+- `data/market/jobs.jsonl` — normalized imported job dataset
+- `data/market/jobs-scored.jsonl` — lightweight fit scores
+- `data/market/market-report.md` — market summary
+- `data/market/deep-eval-queue.tsv` — top queue candidates in batch-compatible TSV format
+
+Current direct-source adapters:
+- Greenhouse public board API
+- Lever public postings API
+- Ashby public hosted jobs boards
+- Browser-driven fallback for custom career pages and unsupported boards
+
+Important constraint:
+- This repo does not ingest LinkedIn directly. The way to approach LinkedIn-like breadth and freshness is aggregating direct ATS sources first, then using browser fallback and manual intake for anything custom.
+
+To move the top slice into the existing deep-eval runner:
+
+```bash
+node market-sync-batch.mjs --dry-run --top 10 --min-rating 2.5
+node market-sync-batch.mjs --top 10 --min-rating 2.5
+```
+
+Optional bulk intake file:
+- `data/market/incoming.tsv`
+- header format: `id	url	company	title	location	content	notes`
 
 ## Pre-configured Portals
 
@@ -153,6 +201,11 @@ Features: 6 filter tabs, 4 sort modes, grouped/flat view, lazy-loaded previews, 
 career-ops/
 ├── CLAUDE.md                    # Claude Code instructions
 ├── AGENTS.md                    # Codex and general-agent instructions
+├── market-import.mjs            # Bulk market importer
+├── market-score.mjs             # Lightweight market-fit scorer
+├── market-analyze.mjs           # Market summary/report generator
+├── market-sync-batch.mjs        # Push top market jobs into batch-input.tsv
+├── market-lib.mjs               # Shared helpers for market scripts
 ├── cv.md                        # Your CV (create this)
 ├── article-digest.md            # Your proof points (optional)
 ├── config/
@@ -173,6 +226,7 @@ career-ops/
 │   └── batch-runner.sh          # Orchestrator script
 ├── dashboard/                   # Go TUI pipeline viewer
 ├── data/                        # Your tracking data (gitignored)
+│   └── market/                  # Generated market dataset and summaries
 ├── reports/                     # Evaluation reports (gitignored)
 ├── output/                      # Generated PDFs (gitignored)
 ├── fonts/                       # Space Grotesk + DM Sans

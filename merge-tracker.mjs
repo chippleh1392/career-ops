@@ -15,6 +15,7 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, renameSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
 import { join, basename } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -378,7 +379,6 @@ if (DRY_RUN) console.log('(dry-run — no changes written)');
 // Optional verify
 if (VERIFY && !DRY_RUN) {
   console.log('\n--- Running verification ---');
-  const { execSync } = await import('child_process');
   try {
     execSync(`node ${join(CAREER_OPS, 'verify-pipeline.mjs')}`, { stdio: 'inherit' });
   } catch (e) {
