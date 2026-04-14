@@ -138,6 +138,11 @@ resolve_agent_bin() {
     || true
 }
 
+trim_cr() {
+  local value="${1-}"
+  printf '%s' "${value%$'\r'}"
+}
+
 # Validate prerequisites
 check_prerequisites() {
   if [[ ! -f "$INPUT_FILE" ]]; then
@@ -200,6 +205,7 @@ get_status() {
   fi
   local status
   status=$(awk -F'\t' -v id="$id" '$1 == id { print $3 }' "$STATE_FILE")
+  status=$(trim_cr "${status:-none}")
   echo "${status:-none}"
 }
 
@@ -212,6 +218,7 @@ get_retries() {
   fi
   local retries
   retries=$(awk -F'\t' -v id="$id" '$1 == id { print $9 }' "$STATE_FILE")
+  retries=$(trim_cr "${retries:-0}")
   echo "${retries:-0}"
 }
 
@@ -233,6 +240,7 @@ next_report_num() {
   # Also check state file for assigned report numbers
   if [[ -f "$STATE_FILE" ]]; then
     while IFS=$'\t' read -r _ _ _ _ _ rnum _ _ _; do
+      rnum=$(trim_cr "$rnum")
       [[ "$rnum" == "report_num" || "$rnum" == "-" || -z "$rnum" ]] && continue
       local n=$((10#$rnum))
       if (( n > max_num )); then
@@ -533,6 +541,10 @@ main() {
   local -a pending_notes=()
 
   while IFS=$'\t' read -r id url source notes; do
+    id=$(trim_cr "$id")
+    url=$(trim_cr "$url")
+    source=$(trim_cr "$source")
+    notes=$(trim_cr "$notes")
     [[ "$id" == "id" ]] && continue  # skip header
     [[ -z "$id" || -z "$url" ]] && continue
 

@@ -18,9 +18,11 @@
 | cv.md | `cv.md` (project root) | ALWAYS |
 | article-digest.md | `article-digest.md` (if exists) | ALWAYS (detailed proof points) |
 | profile.yml | `config/profile.yml` | ALWAYS (candidate identity and targets) |
+| _profile.md | `modes/_profile.md` (if exists) | OPTIONAL override layer for repo-compatible user customization |
 
 **RULE: NEVER hardcode metrics from proof points.** Read them from cv.md + article-digest.md at evaluation time.
 **RULE: For article/project metrics, article-digest.md takes precedence over cv.md** (cv.md may have older numbers).
+**RULE: If `modes/_profile.md` exists, treat it as a compatible override layer for narrative and archetype tweaks.**
 
 ---
 
