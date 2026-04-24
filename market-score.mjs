@@ -5,7 +5,6 @@ import {
   PROFILE_FILE,
   canonicalizeUrl,
   ensureDir,
-  escapeRegex,
   loadYaml,
   normalizeWhitespace,
   readJsonl,
@@ -14,10 +13,29 @@ import {
   writeJsonl,
   writeTsv,
 } from "./market-lib.mjs";
+import { isCommerceShopifyTrack } from "./market-scoring/detect-commerce-track.mjs";
+import { resolveTitleFilterBlocks } from "./market-scoring/resolve-title-filters.mjs";
+import { passesAttainableGeneralFilter } from "./market-scoring/attainable-general.mjs";
+import { scoreCommerceJob } from "./market-scoring/score-commerce.mjs";
+import { scoreGeneralJob } from "./market-scoring/score-general.mjs";
 
 const INPUT_FILE = path.join(MARKET_DIR, "jobs.jsonl");
 const OUTPUT_FILE = path.join(MARKET_DIR, "jobs-scored.jsonl");
 const DEEP_EVAL_QUEUE_FILE = path.join(MARKET_DIR, "deep-eval-queue.tsv");
+const DEEP_EVAL_QUEUE_COMMERCE_FILE = path.join(
+  MARKET_DIR,
+  "deep-eval-queue-commerce.tsv",
+);
+const DEEP_EVAL_QUEUE_GENERAL_FILE = path.join(
+  MARKET_DIR,
+  "deep-eval-queue-general.tsv",
+);
+
+/**
+ * Min star rating for the general-queue (attainable FE). Commerce queue has no
+ * floor so the best Shopify-track rows still appear even when absolute scores are low.
+ */
+const QUEUE_MIN_RATING_GENERAL = 1.85;
 
 const STACK_TERMS = [
   "react",
@@ -35,35 +53,9 @@ const STACK_TERMS = [
 
 function getMatches(text, candidates) {
   const haystack = text.toLowerCase();
-  return candidates.filter((candidate) => haystack.includes(String(candidate).toLowerCase()));
-}
-
-function collectNegativeTitleHits(titleText, negativeFilters) {
-  const lower = String(titleText ?? "").toLowerCase();
-  const hits = [];
-  for (const needle of negativeFilters) {
-    const raw = String(needle).trim();
-    if (!raw) {
-      continue;
-    }
-    const n = raw.toLowerCase();
-    if (/\s/.test(n)) {
-      if (lower.includes(n)) {
-        hits.push(raw);
-      }
-      continue;
-    }
-    if (n === "java") {
-      if (/\bjava\b/i.test(lower) && !/javascript/i.test(lower)) {
-        hits.push(raw);
-      }
-      continue;
-    }
-    if (new RegExp(`\\b${escapeRegex(n)}\\b`, "i").test(lower)) {
-      hits.push(raw);
-    }
-  }
-  return unique(hits);
+  return candidates.filter((candidate) =>
+    haystack.includes(String(candidate).toLowerCase()),
+  );
 }
 
 function detectLane(text) {
@@ -75,40 +67,6 @@ function detectLane(text) {
     return "product";
   }
   return "frontend";
-}
-
-/** Extra weight when title/body read like a hands-on Shopify/commerce web role (similar roles are often LinkedIn-only). */
-function commerceRoleBoost(titleText, fullText) {
-  const t = String(titleText ?? "").toLowerCase();
-  const f = String(fullText ?? "").toLowerCase();
-  const signals = [];
-  let points = 0;
-
-  const shopifyInTitle = /\bshopify\b/.test(t);
-  const webDevTitle =
-    shopifyInTitle && /\b(web\s+developer|developer|engineer)\b/.test(t);
-  if (webDevTitle) {
-    points += 12;
-    signals.push("Shopify-forward title (web/dev/engineering)");
-  } else if (shopifyInTitle && /\b(liquid|plus|headless|storefront)\b/.test(t)) {
-    points += 10;
-    signals.push("Shopify platform keywords in title");
-  }
-
-  if (points === 0 && /\bshopify\b/.test(f) && /\bliquid\b/.test(f)) {
-    points += 8;
-    signals.push("Shopify + Liquid in description");
-  }
-  if (points > 0 && /\b(dtc|direct.to.consumer|ecommerce|e-commerce)\b/.test(f)) {
-    points += 4;
-    signals.push("DTC/ecommerce context");
-  }
-  if (points > 0 && /\b(klaviyo|recharge|gorgias|yotpo|tapcart)\b/.test(f)) {
-    points += 3;
-    signals.push("commerce stack (apps/integrations)");
-  }
-
-  return { points: Math.min(22, points), signals };
 }
 
 function scoreRemoteFit(job) {
@@ -132,11 +90,76 @@ function scoreRemoteFit(job) {
 }
 
 function buildReason(signals) {
-  return summarizeText(signals.slice(0, 4).join("; "), 220);
+  return summarizeText(signals.slice(0, 6).join("; "), 220);
 }
 
 function toRating(score) {
   return Number((score / 20).toFixed(2));
+}
+
+function applyTrackPriorityCaps(job, score) {
+  let capped = score;
+  const track = job.scoring_track ?? "general";
+  const generalPenaltyTier =
+    track === "general" ? job.seniority_penalty_tier ?? "none" : "none";
+  const hasCommerceSeniorityBoost =
+    track === "commerce" && (job.seniority_boost_hits ?? []).length > 0;
+
+  // User preference:
+  // - non-commerce roles should rank highly only when they are attainable/non-senior
+  // - commerce roles should rank highly only when they are senior
+  if (generalPenaltyTier === "clear_senior") {
+    capped = Math.min(capped, 58);
+  }
+  if (generalPenaltyTier === "ambiguous_experienced") {
+    capped = Math.min(capped, 72);
+  }
+  if (track === "commerce" && !hasCommerceSeniorityBoost) {
+    capped = Math.min(capped, 72);
+  }
+
+  return capped;
+}
+
+function pickTrackQueue(sortedJobs, track, { limit, minRating, attainableGeneral }) {
+  const seen = new Set();
+  const out = [];
+  for (const job of sortedJobs) {
+    if ((job.scoring_track ?? "general") !== track) {
+      continue;
+    }
+    if (!job.url || (job.negative_hits ?? []).length > 0) {
+      continue;
+    }
+    if (attainableGeneral && !passesAttainableGeneralFilter(job)) {
+      continue;
+    }
+    if (
+      minRating != null &&
+      (job.quick_fit_rating ?? 0) < minRating
+    ) {
+      continue;
+    }
+    const key = canonicalizeUrl(job.url);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(job);
+    if (out.length >= limit) {
+      break;
+    }
+  }
+  return out;
+}
+
+function toDeepEvalTsvRows(jobs) {
+  return jobs.map((job, index) => ({
+    id: String(index + 1),
+    url: job.url,
+    source: `market:${job.source_type}`,
+    notes: `Score ${job.quick_fit_rating}/5 | ${job.company} | ${job.title} | ${job.quick_fit_reason}`,
+  }));
 }
 
 async function main() {
@@ -148,51 +171,65 @@ async function main() {
     readJsonl(INPUT_FILE),
   ]);
 
-  const trackedCompanies = new Set((portals.tracked_companies ?? []).map((company) => company.name.toLowerCase()));
-  const targetRoles = (profile.target_roles?.primary ?? []).map((role) => role.toLowerCase());
-  const positiveFilters = (portals.title_filter?.positive ?? []).map((value) => value.toLowerCase());
-  const negativeFilters = (portals.title_filter?.negative ?? []).map((value) => value.toLowerCase());
-  const seniorityBoosts = (portals.title_filter?.seniority_boost ?? []).map((value) => value.toLowerCase());
+  const blocks = resolveTitleFilterBlocks(portals);
+
+  const trackedCompanies = new Set(
+    (portals.tracked_companies ?? []).map((company) =>
+      company.name.toLowerCase(),
+    ),
+  );
+  const targetRoles = (profile.target_roles?.primary ?? []).map((role) =>
+    role.toLowerCase(),
+  );
+
+  const commercePos = (blocks.commerce.positive ?? []).map((v) =>
+    String(v).toLowerCase(),
+  );
+  const commerceNeg = (blocks.commerce.negative ?? []).map((v) =>
+    String(v).toLowerCase(),
+  );
+  const commerceSenBoost = (blocks.commerce.seniority_boost ?? []).map((v) =>
+    String(v).toLowerCase(),
+  );
+
+  const generalPos = (blocks.general.positive ?? []).map((v) =>
+    String(v).toLowerCase(),
+  );
+  const generalNeg = (blocks.general.negative ?? []).map((v) =>
+    String(v).toLowerCase(),
+  );
+  const generalSenPenalty = blocks.general.seniority_penalty ?? [];
+
   const scoredJobs = jobs.map((job) => {
-    const fullText = normalizeWhitespace([job.title, job.company, job.location, job.content_text].join(" ")).toLowerCase();
+    const fullText = normalizeWhitespace(
+      [job.title, job.company, job.location, job.content_text].join(" "),
+    ).toLowerCase();
     const titleText = String(job.title ?? "").toLowerCase();
-    const signals = [];
-    let score = 0;
 
-    const targetRoleHits = getMatches(titleText, targetRoles);
-    if (targetRoleHits.length > 0) {
-      score += Math.min(24, targetRoleHits.length * 12);
-      signals.push(`title matches target roles: ${targetRoleHits.join(", ")}`);
-    }
+    const useCommerce = isCommerceShopifyTrack(job, fullText);
 
-    const positiveTitleHits = getMatches(titleText, positiveFilters);
-    if (positiveTitleHits.length > 0) {
-      score += Math.min(24, positiveTitleHits.length * 6);
-      signals.push(`positive title hits: ${positiveTitleHits.join(", ")}`);
-    }
+    const core = useCommerce
+      ? scoreCommerceJob({
+          job,
+          titleLower: titleText,
+          fullLower: fullText,
+          targetRolesLower: targetRoles,
+          positiveFilters: commercePos,
+          negativeFilters: commerceNeg,
+          seniorityBoostsLower: commerceSenBoost,
+        })
+      : scoreGeneralJob({
+          job,
+          titleLower: titleText,
+          fullLower: fullText,
+          targetRolesLower: targetRoles,
+          positiveFilters: generalPos,
+          negativeFilters: generalNeg,
+          seniorityPenaltyNeedles: generalSenPenalty,
+        });
 
-    const positiveBodyHits = unique(getMatches(fullText, positiveFilters).filter((match) => !positiveTitleHits.includes(match)));
-    if (positiveBodyHits.length > 0) {
-      score += Math.min(10, positiveBodyHits.length * 2);
-      signals.push(`supporting body hits: ${positiveBodyHits.join(", ")}`);
-    }
-
-    const negativeHits = collectNegativeTitleHits(job.title ?? "", negativeFilters);
-    if (negativeHits.length > 0) {
-      score -= 45 + (negativeHits.length - 1) * 8;
-      signals.push(`negative filters: ${negativeHits.join(", ")}`);
-    }
-
-    const seniorityHits = getMatches(titleText, seniorityBoosts);
-    if (seniorityHits.length > 0) {
-      score += Math.min(12, seniorityHits.length * 4);
-      signals.push(`seniority markers: ${seniorityHits.join(", ")}`);
-    }
-
-    if (/\bjunior\b|\bintern\b|\bentry level\b/.test(titleText)) {
-      score -= 25;
-      signals.push("juniority penalty");
-    }
+    let score = core.partialScore;
+    const signals = [...core.signals];
 
     const remoteFit = scoreRemoteFit(job);
     score += remoteFit.points;
@@ -209,14 +246,6 @@ async function main() {
       signals.push(`stack overlap: ${unique(stackHits).join(", ")}`);
     }
 
-    const commerceBoost = commerceRoleBoost(titleText, fullText);
-    if (commerceBoost.points > 0) {
-      score += commerceBoost.points;
-      for (const line of commerceBoost.signals) {
-        signals.push(line);
-      }
-    }
-
     if (job.salary_min || job.salary_max) {
       score += 5;
       signals.push("salary signal present");
@@ -225,7 +254,9 @@ async function main() {
     if (job.first_published_at) {
       const publishedAt = new Date(job.first_published_at);
       if (!Number.isNaN(publishedAt.valueOf())) {
-        const ageInDays = Math.floor((Date.now() - publishedAt.valueOf()) / (1000 * 60 * 60 * 24));
+        const ageInDays = Math.floor(
+          (Date.now() - publishedAt.valueOf()) / (1000 * 60 * 60 * 24),
+        );
         if (ageInDays > 90) {
           score -= 2;
           signals.push("stale posting (>90d)");
@@ -237,18 +268,38 @@ async function main() {
       }
     }
 
-    const boundedScore = Math.max(0, Math.min(100, score));
+    const priorityCappedScore = applyTrackPriorityCaps(
+      {
+        scoring_track: useCommerce ? "commerce" : "general",
+        seniority_boost_hits: useCommerce ? core.seniority_boost_hits : [],
+        seniority_penalty_hits: useCommerce ? [] : core.seniority_penalty_hits,
+      },
+      score,
+    );
+    const boundedScore = Math.max(0, Math.min(100, priorityCappedScore));
     const rating = toRating(boundedScore);
     const lane = detectLane(fullText);
-    const recommended = boundedScore >= 65 && negativeHits.length === 0;
+    const recommended =
+      boundedScore >= 65 && core.negative_hits.length === 0;
+
+    const positiveHits = unique([
+      ...core.positive_title_hits,
+      ...core.positive_body_hits,
+    ]);
 
     return {
       ...job,
       market_lane: lane,
-      target_role_hits: targetRoleHits,
-      positive_hits: unique([...positiveTitleHits, ...positiveBodyHits]),
-      negative_hits: unique(negativeHits),
-      seniority_hits: unique(seniorityHits),
+      scoring_track: useCommerce ? "commerce" : "general",
+      target_role_hits: core.target_role_hits,
+      positive_hits: positiveHits,
+      negative_hits: core.negative_hits,
+      seniority_hits: useCommerce
+        ? core.seniority_boost_hits
+        : core.seniority_penalty_hits,
+      seniority_boost_hits: core.seniority_boost_hits,
+      seniority_penalty_hits: core.seniority_penalty_hits,
+      seniority_penalty_tier: core.seniority_penalty_tier ?? "none",
       stack_hits: unique(stackHits),
       quick_fit_score: boundedScore,
       quick_fit_rating: rating,
@@ -257,13 +308,19 @@ async function main() {
     };
   });
 
-  const sortedJobs = scoredJobs.sort((left, right) => right.quick_fit_score - left.quick_fit_score);
+  const sortedJobs = scoredJobs.sort(
+    (left, right) => right.quick_fit_score - left.quick_fit_score,
+  );
   await writeJsonl(OUTPUT_FILE, sortedJobs);
 
   const queueJobs = [];
   const seenQueueUrls = new Set();
   for (const job of sortedJobs) {
-    if (!job.url || job.negative_hits.length > 0 || (job.quick_fit_rating ?? 0) < 2.0) {
+    if (
+      !job.url ||
+      job.negative_hits.length > 0 ||
+      (job.quick_fit_rating ?? 0) < 2.0
+    ) {
       continue;
     }
     const queueKey = canonicalizeUrl(job.url);
@@ -281,22 +338,52 @@ async function main() {
   }
 
   const deepEvalRows = queueJobs.map((job, index) => ({
-      id: String(index + 1),
-      url: job.url,
-      source: `market:${job.source_type}`,
-      notes: `Score ${job.quick_fit_rating}/5 | ${job.company} | ${job.title} | ${job.quick_fit_reason}`,
-    }));
+    id: String(index + 1),
+    url: job.url,
+    source: `market:${job.source_type}`,
+    notes: `Score ${job.quick_fit_rating}/5 | ${job.company} | ${job.title} | ${job.quick_fit_reason}`,
+  }));
 
-  await writeTsv(DEEP_EVAL_QUEUE_FILE, ["id", "url", "source", "notes"], deepEvalRows);
+  await writeTsv(
+    DEEP_EVAL_QUEUE_FILE,
+    ["id", "url", "source", "notes"],
+    deepEvalRows,
+  );
+
+  const queueCommerce = pickTrackQueue(sortedJobs, "commerce", {
+    limit: 25,
+    minRating: null,
+  });
+  const queueGeneral = pickTrackQueue(sortedJobs, "general", {
+    limit: 25,
+    minRating: QUEUE_MIN_RATING_GENERAL,
+    attainableGeneral: true,
+  });
+
+  await writeTsv(
+    DEEP_EVAL_QUEUE_COMMERCE_FILE,
+    ["id", "url", "source", "notes"],
+    toDeepEvalTsvRows(queueCommerce),
+  );
+  await writeTsv(
+    DEEP_EVAL_QUEUE_GENERAL_FILE,
+    ["id", "url", "source", "notes"],
+    toDeepEvalTsvRows(queueGeneral),
+  );
 
   console.log(
     JSON.stringify(
       {
         total_jobs: sortedJobs.length,
-        recommended_jobs: sortedJobs.filter((job) => job.deep_eval_recommended).length,
+        recommended_jobs: sortedJobs.filter((job) => job.deep_eval_recommended)
+          .length,
         queued_jobs: queueJobs.length,
         top_score: sortedJobs[0]?.quick_fit_rating ?? null,
         deep_eval_queue: DEEP_EVAL_QUEUE_FILE,
+        deep_eval_queue_commerce: DEEP_EVAL_QUEUE_COMMERCE_FILE,
+        deep_eval_queue_general: DEEP_EVAL_QUEUE_GENERAL_FILE,
+        queued_commerce: queueCommerce.length,
+        queued_general: queueGeneral.length,
       },
       null,
       2,

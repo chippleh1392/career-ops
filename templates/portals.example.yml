@@ -18,6 +18,9 @@
 # -- Title filter --
 # The scanner uses these keywords to decide if a title is relevant.
 # At least 1 positive must match AND 0 negatives must match (case-insensitive).
+#
+# For market scoring with dual tracks, use title_filter.commerce and title_filter.general
+# (see docs/CUSTOMIZATION.md). A single flat title_filter block still works for scan/import.
 
 title_filter:
   positive:

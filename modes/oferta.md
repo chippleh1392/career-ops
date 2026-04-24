@@ -26,9 +26,17 @@ Then include:
 - `Direct read:` for the most concrete facts from the JD
 - `Interpretation:` for the actual fit read
 
+`Direct read` must explicitly list named stack and workflow requirements when the JD names them. Do not collapse them into vague phrases like "modern frontend stack." Call out:
+- frontend frameworks/libraries such as `React`, `Vue`, `Angular`, `Next.js`, `Svelte`
+- language/runtime requirements such as `TypeScript`, `JavaScript`, `Node`
+- testing/tooling requirements such as `Jest`, `Vite`, `Playwright`, CI/CD tools
+- CMS/platform requirements such as `Sanity`, `Shopify`, `WordPress`, `Sitecore`
+
 ## B) CV Match
 
 Read `cv.md`. Map each important JD requirement to exact evidence from `cv.md` or `article-digest.md`.
+
+For every named framework/platform/tooling requirement in the JD, include a separate row in the CV Match table and mark it explicitly as `Strong`, `Partial`, or `Gap`.
 
 Then add a `Gaps and mitigation` section. For each gap:
 1. Is it a hard blocker or a nice-to-have?
@@ -96,8 +104,6 @@ Use this structure:
 **Date:** {YYYY-MM-DD}
 **Archetype:** {detected}
 **Score:** {X/5}
-**PDF:** {path or pending}
-
 ---
 
 ## A) Role Summary
@@ -127,7 +133,7 @@ Always record the evaluation in `data/applications.md` using canonical English s
 Format:
 
 ```markdown
-| # | Date | Company | Role | Score | Status | PDF | Report |
+| # | Date | Company | Role | Score | Status | Report |
 ```
 
 Status defaults to `Evaluated` unless the workflow explicitly says otherwise.

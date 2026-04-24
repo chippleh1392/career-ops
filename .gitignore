@@ -1,3 +1,6 @@
+# Personal assets (never commit — e.g. resume PDFs; stays local with the project)
+private/
+
 # Personal data (user fills these)
 cv.md
 article-digest.md
@@ -8,6 +11,8 @@ data/market/*
 !data/market/.gitkeep
 reports/*.md
 !reports/.gitkeep
+# Interview-prep deep dives that should stay local even within ignored reports.
+reports/domaine-*.md
 output/*
 !output/.gitkeep
 batch/logs/*
@@ -15,6 +20,7 @@ batch/logs/*
 batch/batch-state.tsv
 batch/batch-input.tsv
 batch/tracker-additions/**/*.tsv
+batch/tracker-additions/merged/*.tsv
 !batch/tracker-additions/.gitkeep
 jds/*
 !jds/.gitkeep
@@ -30,6 +36,9 @@ modes/_profile.md
 .resolved-prompt-*
 node_modules/
 bun.lock
+
+# Playwright-captured full hydrated DOM (large; optional local only)
+interview-prep/snapshots/
 
 # OS
 .DS_Store

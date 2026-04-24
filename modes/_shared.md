@@ -35,6 +35,17 @@ The system should evaluate with real rigor across two active lanes from `config/
 
 Do not force a false choice too early. A role can be a success through either lane if comp, quality, and growth are strong enough.
 
+### Lane Priority Rules
+
+- **Top-band scores belong to senior commerce / Shopify roles first.**
+- **Non-commerce roles should score best when they are attainable non-senior frontend/product-web roles.**
+- For **senior non-commerce** roles, apply a meaningful score discount by default unless the JD shows unusually strong overlap and unusually low interview risk.
+- For **ambiguous non-commerce roles** that read more **mid/mid-senior** than clearly senior, apply only a **partial discount**, not the full senior penalty.
+- For **non-senior commerce** roles, do not treat them as top-priority just because they mention Shopify or ecommerce.
+- If two roles are otherwise similar, prefer:
+  - **senior commerce** over **senior non-commerce**
+  - **non-senior non-commerce** over **senior non-commerce**
+
 | Archetype | Thematic axes | What they buy |
 |-----------|---------------|---------------|
 | **Senior Frontend / Product Engineer** | React, TypeScript, UI systems, product collaboration, web application delivery | Someone who ships polished user-facing product surfaces |

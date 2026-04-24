@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market settings · Career-Ops</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="settings-page">
+    <header class="top">
+      <div>
+        <h1>Market &amp; scoring settings</h1>
+        <p class="lede">
+          <strong>Commerce</strong> and <strong>general</strong> title lists are separate:
+          jobs that look Shopify/commerce use the commerce module (senior-friendly);
+          everything else uses the general module (down-ranks senior titles). See
+          <code>market-scoring/</code>. Also edits search toggles and
+          <code>profile.yml</code> target roles. <code>.bak</code> backups on save;
+          YAML comments may be lost—use git if needed.
+        </p>
+        <p class="sub" id="rootPath"></p>
+      </div>
+      <div class="actions">
+        <a class="btn-link" href="/">← Pipeline</a>
+        <a class="btn-link" href="/market">Market report</a>
+        <button type="button" id="btnReload">Reload</button>
+        <button type="button" id="btnSave" class="primary">Save changes</button>
+      </div>
+    </header>
+
+    <section id="banner" class="banner hidden"></section>
+
+    <div class="settings-grid">
+      <section class="settings-card settings-wide">
+        <h2>Commerce / Shopify title filter</h2>
+        <p class="hint">
+          Used when a posting matches the commerce detector (Shopify, Liquid, etc.).
+          <strong>Seniority boost</strong> adds score for these title tokens.
+        </p>
+        <div class="settings-two-col">
+          <div>
+            <label>Positive (one per line)</label>
+            <textarea id="tfComPos" rows="10" spellcheck="false"></textarea>
+          </div>
+          <div>
+            <label>Negative (one per line)</label>
+            <textarea id="tfComNeg" rows="10" spellcheck="false"></textarea>
+          </div>
+        </div>
+        <label>Seniority boost (one per line)</label>
+        <textarea id="tfComSen" rows="3" spellcheck="false"></textarea>
+      </section>
+
+      <section class="settings-card settings-wide">
+        <h2>General (non-commerce) title filter</h2>
+        <p class="hint">
+          Used for typical frontend/product roles without a strong Shopify signal.
+          <strong>Seniority penalty</strong> subtracts score when these words appear
+          in the title (so mid-level listings rank higher).
+        </p>
+        <div class="settings-two-col">
+          <div>
+            <label>Positive (one per line)</label>
+            <textarea id="tfGenPos" rows="10" spellcheck="false"></textarea>
+          </div>
+          <div>
+            <label>Negative (one per line)</label>
+            <textarea id="tfGenNeg" rows="10" spellcheck="false"></textarea>
+          </div>
+        </div>
+        <label>Seniority penalty (one per line)</label>
+        <textarea id="tfGenPen" rows="3" spellcheck="false"></textarea>
+      </section>
+
+      <section class="settings-card">
+        <h2>Target roles (<code>profile.yml</code>)</h2>
+        <p class="hint">
+          Strong bonus in market scoring when the <strong>job title</strong> contains
+          one of these strings (case-insensitive).
+        </p>
+        <label>target_roles.primary (one per line)</label>
+        <textarea id="targetRoles" rows="14" spellcheck="false"></textarea>
+      </section>
+
+      <section class="settings-card settings-wide">
+        <h2>Search queries (<code>portal scan</code>)</h2>
+        <p class="hint">
+          Toggles <code>enabled</code> on each entry. Used by <code>npm run scan</code>
+          web search discovery—not every market-import source.
+        </p>
+        <div id="searchQueries" class="toggle-list"></div>
+      </section>
+
+      <section class="settings-card settings-wide">
+        <h2>Tracked companies</h2>
+        <p class="hint">
+          Enable or disable companies pulled in <code>market-import</code> (API /
+          browser boards). Does not remove jobs already in <code>jobs.jsonl</code> until
+          you re-run import.
+        </p>
+        <div id="trackedCos" class="toggle-list toggle-list--cols"></div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <code>PUT /api/config</code> with JSON body ·
+      <a href="/api/config" target="_blank" rel="noreferrer">GET /api/config</a>
+    </footer>
+
+    <script src="/settings.js" type="module"></script>
+  </body>
+</html>

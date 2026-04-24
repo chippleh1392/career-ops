@@ -47,6 +47,7 @@ Built by someone who used it to evaluate 740+ job offers, generate 100+ tailored
 | **Batch Processing** | Parallel evaluation with `claude`, `codex`, or prepared manual work packets |
 | **Market Scan Layer** | Import large job datasets from Greenhouse, Lever, Ashby, and browser-scanned career pages; score them lightly, analyze title/remote/salary/source/freshness trends, and hand the top slice into deep evaluation |
 | **Dashboard TUI** | Terminal UI to browse, filter, and sort your pipeline |
+| **Dashboard Web** | Local browser UI (`npm run web`) — same data as the TUI via `/api/pipeline` |
 | **Human-in-the-Loop** | AI evaluates and recommends, you decide and act. The system never submits an application -- you always have the final call |
 | **Pipeline Integrity** | Automated merge, dedup, status normalization, health checks |
 

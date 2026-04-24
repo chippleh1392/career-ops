@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pipeline tracker · Career-Ops</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <h1>Pipeline tracker</h1>
+        <p class="lede">
+          Rows are loaded from <code>applications.md</code>. Each line is a
+          <strong>tracker entry</strong> (evaluation, tailored PDF, follow-ups,
+          etc.). Use the <strong>Status</strong> column to see what actually
+          happened — e.g. <strong>Evaluated</strong> means scored in career-ops,
+          not “I applied on the company site.” Click
+          <strong>#</strong>, <strong>Date</strong>, <strong>Company</strong>,
+          <strong>Role</strong>, <strong>Score</strong>, or
+          <strong>Status</strong> to sort; click again to reverse.
+        </p>
+        <p class="sub" id="rootPath"></p>
+      </div>
+      <div class="actions">
+        <input
+          type="search"
+          id="filter"
+          placeholder="Filter company, role, status…"
+          autocomplete="off"
+        />
+        <button type="button" id="btnRefresh">Refresh</button>
+      </div>
+    </header>
+
+    <section id="banner" class="banner hidden"></section>
+
+    <section class="metrics" id="metrics"></section>
+
+    <section class="progress" id="progress"></section>
+
+    <div class="table-wrap">
+      <h2 class="table-heading">Tracker rows</h2>
+      <table aria-label="Job search tracker rows">
+        <thead>
+          <tr>
+            <th scope="col">
+              <button type="button" class="th-sort" data-sort="num" aria-label="Sort by row number">
+                #
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-sort" data-sort="date" aria-label="Sort by date">
+                Date
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-sort" data-sort="company" aria-label="Sort by company">
+                Company
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-sort" data-sort="role" aria-label="Sort by role">
+                Role
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-sort" data-sort="score" aria-label="Sort by score">
+                Score
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-sort" data-sort="status" aria-label="Sort by status">
+                Status
+              </button>
+            </th>
+            <th scope="col">Report</th>
+            <th scope="col">TL;DR</th>
+            <th scope="col">Links</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <footer class="foot">
+      Read-only. Data file is still named <code>applications.md</code> for
+      compatibility; it holds <strong>all tracker entries</strong>, not only
+      submitted applications. Same data as the TUI dashboard.
+      <a href="/api/pipeline" target="_blank" rel="noreferrer">JSON API</a>
+      ·
+      <a href="/market">Market report</a>
+      (<span class="foot-hint">after <code>npm run market:refresh</code></span>)
+      ·
+      <a href="/settings">Market settings</a>
+    </footer>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

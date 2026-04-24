@@ -134,6 +134,17 @@ function buildTitleFilter(titleFilter) {
   };
 }
 
+/** OR of commerce + general blocks when both exist (same as market-import). */
+function buildTitleFilterFromConfig(config) {
+  const tf = config.title_filter ?? {};
+  if (tf.commerce && tf.general) {
+    const a = buildTitleFilter(tf.commerce);
+    const b = buildTitleFilter(tf.general);
+    return (title) => a(title) || b(title);
+  }
+  return buildTitleFilter(tf);
+}
+
 // ── Dedup ───────────────────────────────────────────────────────────
 
 function loadSeenUrls() {
@@ -170,14 +181,19 @@ function loadSeenUrls() {
 function loadSeenCompanyRoles() {
   const seen = new Set();
   if (existsSync(APPLICATIONS_PATH)) {
-    const text = readFileSync(APPLICATIONS_PATH, 'utf-8');
-    // Parse markdown table rows: | # | Date | Company | Role | ...
-    for (const match of text.matchAll(/\|[^|]+\|[^|]+\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g)) {
-      const company = match[1].trim().toLowerCase();
-      const role = match[2].trim().toLowerCase();
-      if (company && role && company !== 'company') {
-        seen.add(`${company}::${role}`);
-      }
+    const lines = readFileSync(APPLICATIONS_PATH, 'utf-8').split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('|')) continue;
+      if (line.includes('---')) continue;
+
+      const parts = line.split('|').map((s) => s.trim());
+      if (parts.length < 6) continue;
+
+      const company = parts[3]?.toLowerCase();
+      const role = parts[4]?.toLowerCase();
+
+      if (!company || !role || company === 'company') continue;
+      seen.add(`${company}::${role}`);
     }
   }
   return seen;
@@ -263,7 +279,7 @@ async function main() {
 
   const config = parseYaml(readFileSync(PORTALS_PATH, 'utf-8'));
   const companies = config.tracked_companies || [];
-  const titleFilter = buildTitleFilter(config.title_filter);
+  const titleFilter = buildTitleFilterFromConfig(config);
 
   // 2. Filter to enabled companies with detectable APIs
   const targets = companies

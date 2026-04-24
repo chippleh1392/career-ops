@@ -38,7 +38,7 @@ cp templates/portals.example.yml portals.yml
 ```
 
 Edit `portals.yml`:
-- Update `title_filter.positive` with keywords matching your target roles
+- Update **`title_filter.commerce`** and **`title_filter.general`** (see `market-scoring/`): commerce is senior-friendly for Shopify/commerce postings; general down-ranks senior titles for everything else. Legacy flat `title_filter` still loads until you save from the web UI or migrate YAML.
 - Add companies you want to track in `tracked_companies`
 - Customize `search_queries` for your preferred job boards
 
@@ -113,3 +113,37 @@ cd dashboard
 go build -o career-dashboard .
 ./career-dashboard --path ..  # Opens TUI pipeline viewer
 ```
+
+## Web dashboard (Optional)
+
+Browser UI for the same pipeline data (no Go required). Serves on **127.0.0.1** only by default.
+
+```bash
+npm run web
+# → http://127.0.0.1:8787/
+```
+
+Options:
+
+```bash
+node web/server.mjs --path /path/to/career-ops   # data root (default: repo root)
+node web/server.mjs --port 9000
+node web/server.mjs --host 0.0.0.0                # listen on all interfaces (LAN) — use with care
+```
+
+- **GET `/api/pipeline`** — JSON (`applications`, `metrics`, `progressMetrics`), same enrichment rules as the TUI.
+- **GET `/api/report?path=reports/001-....md`** — **rendered HTML** (readable typography, tables, dark theme). Append **`&raw=1`** for the raw `.md` file (plain text).
+- **GET `/market`** — **rendered HTML** for `data/market/market-report.md` (output of `npm run market:refresh`). **`/market?raw=1`** for raw Markdown. The pipeline home footer links here.
+
+**Where market data lives on disk**
+
+| Path | What it is |
+|------|------------|
+| `data/market/jobs.jsonl` | Imported job rows |
+| `data/market/jobs-scored.jsonl` | After `market:score` |
+| `data/market/market-report.md` | Human-readable analysis (open in editor or **`/market`** in the web UI) |
+| `data/market/market-summary.json` | Machine summary stats |
+| `data/market/import-summary.json` | Last import run metadata |
+| `data/market/deep-eval-queue.tsv` | Top 25 overall (mixed tracks) for quick review |
+| `data/market/deep-eval-queue-commerce.tsv` | Best **commerce / Shopify-track** rows (senior-friendly scoring) |
+| `data/market/deep-eval-queue-general.tsv` | **Attainable** general FE: no Senior/Staff/Lead/etc. in title, min ~1.85★ |

@@ -22,7 +22,7 @@ The HTML template rendered by Playwright into PDF. Uses placeholder tokens (`{{N
 
 Pre-configured portal scanner with 45+ tracked companies and search queries. Contains title filters, company career page URLs, Greenhouse API endpoints, and WebSearch queries.
 
-**To activate:** Copy to project root as `portals.yml` and customize `title_filter.positive` keywords for your target roles. Add or remove companies as needed.
+**To activate:** Copy to project root as `portals.yml` and customize `title_filter` keywords for your target roles (for market scoring, prefer nested `title_filter.commerce` / `title_filter.general`—see `docs/CUSTOMIZATION.md`). Add or remove companies as needed.
 
 ### states.yml
 

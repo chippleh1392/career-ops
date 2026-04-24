@@ -26,11 +26,7 @@ Write the evaluation to:
 reports/{###}-{company-slug}-{YYYY-MM-DD}.md
 ```
 
-## Step 3 — Generate The PDF
-
-Run the PDF workflow defined in [`modes/pdf.md`](C:/Users/chipp/OneDrive/Documents/projects/career-ops/modes/pdf.md).
-
-## Step 4 — Draft Application Answers
+## Step 3 — Draft Application Answers
 
 Only do this when the final score is `>= 4.5`.
 
@@ -52,8 +48,8 @@ Tone rules:
 - 2-4 sentences per answer
 - English only
 
-## Step 5 — Update The Tracker
+## Step 4 — Update The Tracker
 
-Register the job in `data/applications.md` with the report and PDF columns populated.
+Register the job in `data/applications.md` with the report column populated.
 
 If any step fails, continue when possible and mark the failed step clearly instead of hiding it.

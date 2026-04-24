@@ -224,6 +224,29 @@ function matchesTitleFilters(title, titleFilter) {
   return hasPositive && !hasNegative;
 }
 
+/** Import keeps a job if either commerce or general title_filter block matches. */
+function matchesTitleFiltersFromPortals(title, portals) {
+  const tf = portals.title_filter ?? {};
+  if (tf.commerce && tf.general) {
+    return (
+      matchesTitleFilters(title, tf.commerce) ||
+      matchesTitleFilters(title, tf.general)
+    );
+  }
+  return matchesTitleFilters(title, tf);
+}
+
+function titleHasNegativeKeywordFromPortals(title, portals) {
+  const tf = portals.title_filter ?? {};
+  if (tf.commerce && tf.general) {
+    return (
+      titleHasNegativeKeyword(title, tf.commerce) ||
+      titleHasNegativeKeyword(title, tf.general)
+    );
+  }
+  return titleHasNegativeKeyword(title, tf);
+}
+
 function titleHasNegativeKeyword(title, titleFilter) {
   const normalized = String(title ?? "").toLowerCase();
   if (!normalized) {
@@ -253,13 +276,13 @@ function titleHasNegativeKeyword(title, titleFilter) {
   return false;
 }
 
-function matchesBrowserAnchorTitle(title, titleFilter) {
+function matchesBrowserAnchorTitle(title, portals) {
   const normalized = String(title ?? "").trim();
-  if (!normalized || titleHasNegativeKeyword(normalized, titleFilter)) {
+  if (!normalized || titleHasNegativeKeywordFromPortals(normalized, portals)) {
     return false;
   }
 
-  if (matchesTitleFilters(normalized, titleFilter)) {
+  if (matchesTitleFiltersFromPortals(normalized, portals)) {
     return true;
   }
 
@@ -627,12 +650,12 @@ function extractDetailText(html, platform) {
   return summarizeText(stripHtml(html), 4000);
 }
 
-async function enrichJobsWithDetailPages(jobs, titleFilter) {
+async function enrichJobsWithDetailPages(jobs, portals) {
   const candidates = jobs
     .filter(
       (job) =>
         job.url &&
-        matchesTitleFilters(job.title, titleFilter) &&
+        matchesTitleFiltersFromPortals(job.title, portals) &&
         String(job.content_text ?? "").length < STRUCTURED_DETAIL_MIN_TEXT,
     )
     .slice(0, MAX_DETAIL_FETCHES_PER_COMPANY);
@@ -676,7 +699,7 @@ async function enrichJobsWithDetailPages(jobs, titleFilter) {
   });
 }
 
-async function importGreenhouseCompany(companyConfig, titleFilter) {
+async function importGreenhouseCompany(companyConfig, portals) {
   const apiUrl = buildGreenhouseApiUrl(companyConfig);
   const listPayload = await fetchJson(apiUrl);
   const listJobs = listPayload.jobs ?? [];
@@ -689,16 +712,16 @@ async function importGreenhouseCompany(companyConfig, titleFilter) {
   });
 
   const jobs = detailJobs.map((job) => mapGreenhouseJob(companyConfig, job));
-  return await enrichJobsWithDetailPages(jobs, titleFilter);
+  return await enrichJobsWithDetailPages(jobs, portals);
 }
 
-async function importLeverCompany(companyConfig, titleFilter) {
+async function importLeverCompany(companyConfig, portals) {
   const apiUrl = buildLeverApiUrl(companyConfig);
   const jobs = (await fetchJson(apiUrl)).map((job) => mapLeverJob(companyConfig, job));
-  return await enrichJobsWithDetailPages(jobs, titleFilter);
+  return await enrichJobsWithDetailPages(jobs, portals);
 }
 
-async function importAshbyCompany(companyConfig, titleFilter) {
+async function importAshbyCompany(companyConfig, portals) {
   const html = await fetchText(companyConfig.careers_url);
   const appData = extractJsonAssignment(html, "window.__appData = ");
   const postings = appData?.jobBoard?.jobPostings ?? appData?.jobBoard?.postings ?? [];
@@ -706,10 +729,10 @@ async function importAshbyCompany(companyConfig, titleFilter) {
     .filter((posting) => posting.isListed !== false)
     .map((posting) => mapAshbyPosting(companyConfig, posting));
 
-  return await enrichJobsWithDetailPages(jobs, titleFilter);
+  return await enrichJobsWithDetailPages(jobs, portals);
 }
 
-async function importWorkableCompany(companyConfig, titleFilter) {
+async function importWorkableCompany(companyConfig, portals) {
   const widgetUrl = buildWorkableWidgetUrl(companyConfig);
   if (!widgetUrl) {
     return [];
@@ -717,14 +740,14 @@ async function importWorkableCompany(companyConfig, titleFilter) {
 
   const payload = await fetchJson(widgetUrl);
   const jobs = (payload.jobs ?? []).map((job) => mapWorkableJob(companyConfig, job));
-  return await enrichJobsWithDetailPages(jobs, titleFilter);
+  return await enrichJobsWithDetailPages(jobs, portals);
 }
 
 function chooseAnchorTitle(anchor) {
   return normalizeWhitespace(anchor.text || anchor.ariaLabel || anchor.title || anchor.cardText || "");
 }
 
-function isLikelyJobAnchor(anchor, companyConfig, titleFilter) {
+function isLikelyJobAnchor(anchor, companyConfig, portals) {
   const title = chooseAnchorTitle(anchor);
   const url = canonicalizeUrl(anchor.url);
 
@@ -736,10 +759,10 @@ function isLikelyJobAnchor(anchor, companyConfig, titleFilter) {
     return false;
   }
 
-  return matchesBrowserAnchorTitle(title, titleFilter);
+  return matchesBrowserAnchorTitle(title, portals);
 }
 
-async function importBrowserCompany(companyConfig, titleFilter, browserContext) {
+async function importBrowserCompany(companyConfig, portals, browserContext) {
   const page = await browserContext.newPage();
 
   try {
@@ -771,7 +794,7 @@ async function importBrowserCompany(companyConfig, titleFilter, browserContext) 
     );
 
     const anchorJobs = payload.anchors
-      .filter((anchor) => isLikelyJobAnchor(anchor, companyConfig, titleFilter))
+      .filter((anchor) => isLikelyJobAnchor(anchor, companyConfig, portals))
       .map((anchor) =>
         mapBrowserAnchorJob(companyConfig, {
           title: chooseAnchorTitle(anchor),
@@ -780,14 +803,13 @@ async function importBrowserCompany(companyConfig, titleFilter, browserContext) 
       );
 
     const jobs = [...jsonLdJobs, ...anchorJobs].filter((job) => job.key);
-    return await enrichJobsWithDetailPages(jobs, titleFilter);
+    return await enrichJobsWithDetailPages(jobs, portals);
   } finally {
     await page.close().catch(() => {});
   }
 }
 
 async function importTrackedCompanies(portals) {
-  const titleFilter = portals.title_filter ?? {};
   const companies = (portals.tracked_companies ?? []).filter(
     (company) => company.enabled !== false && company.careers_url,
   );
@@ -815,16 +837,16 @@ async function importTrackedCompanies(portals) {
         let jobs = [];
         switch (adapter.type) {
           case "greenhouse":
-            jobs = await importGreenhouseCompany(company, titleFilter);
+            jobs = await importGreenhouseCompany(company, portals);
             break;
           case "lever":
-            jobs = await importLeverCompany(company, titleFilter);
+            jobs = await importLeverCompany(company, portals);
             break;
           case "ashby":
-            jobs = await importAshbyCompany(company, titleFilter);
+            jobs = await importAshbyCompany(company, portals);
             break;
           case "workable":
-            jobs = await importWorkableCompany(company, titleFilter);
+            jobs = await importWorkableCompany(company, portals);
             break;
           default:
             jobs = [];
@@ -877,7 +899,7 @@ async function importTrackedCompanies(portals) {
         BROWSER_COMPANY_CONCURRENCY,
         async (company) => {
           try {
-            const jobs = await importBrowserCompany(company, titleFilter, context);
+            const jobs = await importBrowserCompany(company, portals, context);
             return {
               company,
               jobs,
@@ -1003,12 +1025,11 @@ async function main() {
   let importedJobs = [...trackedCompaniesImport.importedJobs, ...localImport.importedJobs].filter((job) => job.key);
 
   if (portals.market_import?.drop_without_title_match === true) {
-    const titleFilter = portals.title_filter ?? {};
     importedJobs = importedJobs.filter((job) => {
       if (!structuredSources.has(job.source_type)) {
         return true;
       }
-      return matchesTitleFilters(job.title, titleFilter);
+      return matchesTitleFiltersFromPortals(job.title, portals);
     });
   }
 

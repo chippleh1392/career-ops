@@ -1,4 +1,5 @@
 import path from "node:path";
+import { passesAttainableGeneralFilter } from "./market-scoring/attainable-general.mjs";
 import { MARKET_DIR, ensureDir, normalizeWhitespace, readJsonl, writeText, writeTsv } from "./market-lib.mjs";
 
 const INPUT_FILE = path.join(MARKET_DIR, "jobs-scored.jsonl");
@@ -75,13 +76,71 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function mdTableCell(value) {
+  return String(value ?? "")
+    .replace(/\|/g, "·")
+    .replace(/\r?\n/g, " ");
+}
+
+function pickTrackShortlist(
+  sortedJobs,
+  track,
+  { max, minRating, requireSeniorBoost, attainableGeneralOnly },
+) {
+  const out = [];
+  for (const job of sortedJobs) {
+    if ((job.scoring_track ?? "general") !== track) {
+      continue;
+    }
+    if (!job.url || (job.negative_hits ?? []).length > 0) {
+      continue;
+    }
+    if ((job.quick_fit_rating ?? 0) < minRating) {
+      continue;
+    }
+    if (requireSeniorBoost && !(job.seniority_boost_hits ?? []).length) {
+      continue;
+    }
+    if (attainableGeneralOnly && !passesAttainableGeneralFilter(job)) {
+      continue;
+    }
+    out.push(job);
+    if (out.length >= max) {
+      break;
+    }
+  }
+  return out;
+}
+
 async function main() {
   await ensureDir(MARKET_DIR);
   const jobs = await readJsonl(INPUT_FILE);
 
+  const sortedByScore = [...jobs].sort(
+    (left, right) => (right.quick_fit_score ?? 0) - (left.quick_fit_score ?? 0),
+  );
+
+  const shortlistCommerceSenior = pickTrackShortlist(sortedByScore, "commerce", {
+    max: 15,
+    minRating: 1.5,
+    requireSeniorBoost: true,
+  });
+  const shortlistCommerce = pickTrackShortlist(sortedByScore, "commerce", {
+    max: 20,
+    minRating: 0,
+    requireSeniorBoost: false,
+  });
+  const shortlistGeneral = pickTrackShortlist(sortedByScore, "general", {
+    max: 20,
+    minRating: 1.85,
+    requireSeniorBoost: false,
+    attainableGeneralOnly: true,
+  });
+
   const totalJobs = jobs.length;
   const recommendedJobs = jobs.filter((job) => job.deep_eval_recommended);
   const remoteBreakdown = new Map();
+  const trackBreakdown = new Map();
   const laneBreakdown = new Map();
   const titleBreakdown = new Map();
   const platformBreakdown = new Map();
@@ -92,6 +151,8 @@ async function main() {
 
   for (const job of jobs) {
     remoteBreakdown.set(job.remote_mode, (remoteBreakdown.get(job.remote_mode) ?? 0) + 1);
+    const track = job.scoring_track ?? "unknown";
+    trackBreakdown.set(track, (trackBreakdown.get(track) ?? 0) + 1);
     laneBreakdown.set(job.market_lane, (laneBreakdown.get(job.market_lane) ?? 0) + 1);
     platformBreakdown.set(job.platform, (platformBreakdown.get(job.platform) ?? 0) + 1);
     sourceBreakdown.set(job.source_type, (sourceBreakdown.get(job.source_type) ?? 0) + 1);
@@ -140,6 +201,7 @@ async function main() {
 
   const titleRows = [...titleBreakdown.entries()].sort((left, right) => right[1] - left[1]);
   const remoteRows = [...remoteBreakdown.entries()].sort((left, right) => right[1] - left[1]);
+  const trackRows = [...trackBreakdown.entries()].sort((left, right) => right[1] - left[1]);
   const laneRows = [...laneBreakdown.entries()].sort((left, right) => right[1] - left[1]);
   const platformRows = [...platformBreakdown.entries()].sort((left, right) => right[1] - left[1]);
   const sourceRows = [...sourceBreakdown.entries()].sort((left, right) => right[1] - left[1]);
@@ -197,6 +259,12 @@ async function main() {
     "|---|---:|---:|",
     ...laneRows.map(([lane, count]) => `| ${lane} | ${count} | ${formatPercent(count, totalJobs)} |`),
     "",
+    "## Scoring track (commerce vs general)",
+    "",
+    "| Track | Count | Share |",
+    "|---|---:|---:|",
+    ...trackRows.map(([track, count]) => `| ${track} | ${count} | ${formatPercent(count, totalJobs)} |`),
+    "",
     "## Platform Split",
     "",
     "| Platform | Count | Share |",
@@ -242,6 +310,45 @@ async function main() {
         `| ${company.company} | ${company.jobs} | ${company.recommended} | ${company.average_score.toFixed(2)}/5 |`,
     ),
     "",
+    "## Shopify / commerce — senior signals (best Shopify-style matches)",
+    "",
+    "Commerce-track jobs with **seniority boost** hits in the title (Sr., Lead, Staff, …). For the full commerce list, see the next section.",
+    "",
+    "| Rank | Score | Company | Title | Seniority |",
+    "|---:|---:|---|---|---|",
+    ...(shortlistCommerceSenior.length
+      ? shortlistCommerceSenior.map(
+          (job, index) =>
+            `| ${index + 1} | ${job.quick_fit_rating.toFixed(2)}/5 | ${mdTableCell(job.company)} | ${mdTableCell(job.title)} | ${mdTableCell((job.seniority_boost_hits ?? []).join(", ") || "—")} |`,
+        )
+      : ["| — | — | — | *No rows this run* | — |"]),
+    "",
+    "## Shopify / commerce — all shortlist",
+    "",
+    "Top commerce-track postings by score (no negative title hits). Use `data/market/deep-eval-queue-commerce.tsv` for batch workflows.",
+    "",
+    "| Rank | Score | Company | Title |",
+    "|---:|---:|---|---|",
+    ...(shortlistCommerce.length
+      ? shortlistCommerce.map(
+          (job, index) =>
+            `| ${index + 1} | ${job.quick_fit_rating.toFixed(2)}/5 | ${mdTableCell(job.company)} | ${mdTableCell(job.title)} |`,
+        )
+      : ["| — | — | — | *No rows this run* |"]),
+    "",
+    "## General frontend — attainable targets",
+    "",
+    "General-track roles only, **excluding** titles that hit seniority penalties (Senior, Staff, Lead, …) plus obvious leadership wording (Director, Head of, VP, Chief). Min rating 1.85★. See `data/market/deep-eval-queue-general.tsv`.",
+    "",
+    "| Rank | Score | Company | Title |",
+    "|---:|---:|---|---|",
+    ...(shortlistGeneral.length
+      ? shortlistGeneral.map(
+          (job, index) =>
+            `| ${index + 1} | ${job.quick_fit_rating.toFixed(2)}/5 | ${mdTableCell(job.company)} | ${mdTableCell(job.title)} |`,
+        )
+      : ["| — | — | — | *No rows this run* |"]),
+    "",
     "## Top Deep-Eval Candidates",
     "",
     "| Rank | Score | Company | Title | Remote | Source |",
@@ -260,6 +367,10 @@ async function main() {
     companies: companyRows.length,
     salary_datapoints: salaryMidpoints.length,
     avg_salary_midpoint: avgSalary,
+    scoring_track: trackRows.map(([track, count]) => ({ track, count })),
+    shortlist_commerce_senior: shortlistCommerceSenior.length,
+    shortlist_commerce: shortlistCommerce.length,
+    shortlist_general: shortlistGeneral.length,
     top_sources: sourceRows.slice(0, 10).map(([source, count]) => ({ source, count })),
     freshness: freshnessRows.map(([bucket, count]) => ({ bucket, count })),
     top_title_families: titleRows.slice(0, 10).map(([title, count]) => ({ title, count })),
