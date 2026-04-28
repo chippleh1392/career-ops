@@ -13,6 +13,7 @@ import {
   loadMarketConfig,
   saveMarketConfig,
 } from './lib/market-config.mjs';
+import { analyzeSearchHealth } from '../lib/search-health-analyze.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, 'public');
@@ -185,11 +186,39 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    let filePath = url.pathname === '/' ? '/index.html' : url.pathname;
-    if (filePath === '/settings') {
-      filePath = '/settings.html';
+    if (url.pathname === '/api/search-health' && req.method === 'GET') {
+      const asQ = url.searchParams.get('asOf');
+      const payload = analyzeSearchHealth(
+        careerOpsPath,
+        asQ ? { asOf: asQ } : {},
+      );
+      if (payload.ok === false) {
+        res.writeHead(404, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-store',
+        });
+        res.end(JSON.stringify(payload));
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(JSON.stringify({ careerOpsPath, ...payload }));
+      return;
     }
-    const resolved = path.join(PUBLIC, path.normalize(filePath));
+
+    const pathnameNormalized = url.pathname.replace(/\/+$/, '') || '/';
+
+    let filePath =
+      pathnameNormalized === '/' ? '/index.html' : pathnameNormalized;
+    if (!filePath.endsWith('.html')) {
+      if (filePath === '/settings') filePath = '/settings.html';
+      else if (filePath === '/search-health') filePath = '/search-health.html';
+    }
+    /** Avoid path.join quirks when the second segment looks absolute (POSIX /…) */
+    const stripped = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+    const resolved = path.join(PUBLIC, path.normalize(stripped));
     if (!resolved.startsWith(PUBLIC)) {
       res.writeHead(403);
       res.end('forbidden');

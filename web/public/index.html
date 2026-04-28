@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pipeline tracker · Career-Ops</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=2026-04-27-notes" />
   </head>
   <body>
     <header class="top">
@@ -16,7 +16,9 @@
           <strong>tracker entry</strong> (evaluation, tailored PDF, follow-ups,
           etc.). Use the <strong>Status</strong> column to see what actually
           happened — e.g. <strong>Evaluated</strong> means scored in career-ops,
-          not “I applied on the company site.” Click
+          not “I applied on the company site.”
+          <strong>Notes</strong> holds Gmail evidence, dated updates, and your own
+          context. Click
           <strong>#</strong>, <strong>Date</strong>, <strong>Company</strong>,
           <strong>Role</strong>, <strong>Score</strong>, or
           <strong>Status</strong> to sort; click again to reverse.
@@ -27,7 +29,7 @@
         <input
           type="search"
           id="filter"
-          placeholder="Filter company, role, status…"
+          placeholder="Filter company, role, status, notes…"
           autocomplete="off"
         />
         <button type="button" id="btnRefresh">Refresh</button>
@@ -77,6 +79,7 @@
             </th>
             <th scope="col">Report</th>
             <th scope="col">TL;DR</th>
+            <th scope="col">Notes</th>
             <th scope="col">Links</th>
           </tr>
         </thead>
@@ -94,8 +97,10 @@
       (<span class="foot-hint">after <code>npm run market:refresh</code></span>)
       ·
       <a href="/settings">Market settings</a>
+      ·
+      <a href="/search-health">Search health</a>
     </footer>
 
-    <script src="/app.js" type="module"></script>
+    <script src="/app.js?v=2026-04-27-notes" type="module"></script>
   </body>
 </html>

@@ -5,6 +5,7 @@ private/
 cv.md
 article-digest.md
 data/applications.md
+data/tracker-events.jsonl
 data/pipeline.md
 data/scan-history.tsv
 data/market/*
@@ -49,4 +50,8 @@ interview-prep/snapshots/
 .claude/settings.local.json
 .claude/memory/
 career-dashboard
-package-lock.json
+
+# Local secrets (dotenv / env files — never commit)
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search health · Career-Ops</title>
+    <link rel="stylesheet" href="/styles.css?v=2026-search-health-1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <h1>Search health</h1>
+        <p class="lede">
+          Timing and funnel metrics from <code>tracker-events.jsonl</code> +
+          <code>applications.md</code>. Facts only —
+          compare to your Life Dash OS / market research yourself.
+          <button type="button" id="shRefresh">Refresh</button>
+        </p>
+        <p class="sub" id="shMeta"></p>
+      </div>
+      <div class="actions">
+        <label class="foot-hint" for="shAsOf">As-of</label>
+        <input type="date" id="shAsOf" />
+      </div>
+    </header>
+
+    <section id="shBanner" class="banner hidden"></section>
+
+    <section class="metrics" id="shMetrics"></section>
+
+    <section class="progress" id="shCharts">
+      <div class="card">
+        <h2>Pipeline snapshot</h2>
+        <span class="card-hint">current rows by status</span>
+        <div class="sh-chart"><canvas id="snap" height="240"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Event cadence</h2>
+        <span class="card-hint">rolling windows (distinct status→Applied nums + events)</span>
+        <div class="sh-chart"><canvas id="bars" height="280"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Days to first Gmail ack</h2>
+        <span class="card-hint">per row samples (where dates allow)</span>
+        <div class="sh-chart"><canvas id="hist" height="240"></canvas></div>
+      </div>
+    </section>
+
+    <section class="sh-signals-wrap">
+      <div class="card">
+        <h2>Signals</h2>
+        <p class="card-hint">Heuristics, not benchmarks</p>
+        <div id="shSignalsRed" class="sh-signals"></div>
+        <div id="shSignalsAmber" class="sh-signals"></div>
+      </div>
+      <div class="card">
+        <h2>Stale Applied (no Gmail ack)</h2>
+        <p class="card-hint">Older than openness threshold below</p>
+        <div id="shStale"></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      API: <a href="/api/search-health" target="_blank" rel="noreferrer">/api/search-health</a>
+      (<code>?asOf=YYYY-MM-DD</code>) · CLI: <code>npm run search:health</code> ·
+      <a href="/">← Pipeline</a>
+      · <a href="/market">Market report</a>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/search-health-page.js?v=2026-search-health-1" type="module"></script>
+  </body>
+</html>

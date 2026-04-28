@@ -1,5 +1,6 @@
 ---
-type: company-dossier
+
+## type: company-dossier
 status: active
 companies: [American Specialty Health]
 source: [eliassen-recruiter, public-research, user-context, dom-research-2026-04]
@@ -7,7 +8,6 @@ role: Frontend Engineer (React)
 recruiter: Eliassen Group — Haley Foxworth
 likely_interviewer: Anthony Trama
 updated: 2026-04-24
----
 
 ## Pipeline log
 
@@ -126,24 +126,28 @@ Public signals + hydrated DOM point at **React + React Router + MUI (Emotion und
 
 ### Tier 1 — must be sharp (recruiter + HM)
 
-| Area | What to drill |
-|------|----------------|
-| **React** | Hooks, effects + dependency discipline, lifting state, lists/keys, performance basics (memo when it matters, not trivia). |
-| **Vanilla JS** | Arrays / objects, `async/await`, Promises, closures, modules — they say **JS fundamentals** explicitly. |
-| **MUI** | **Layout:** `Box`, `Stack`, `Container`, **Grid** / **Grid2** (know both exist). **Inputs** and **forms**. **Theme** + **`sx`**. **Dialogs** / **AppBar** patterns. |
+
+| Area                  | What to drill                                                                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **React**             | Hooks, effects + dependency discipline, lifting state, lists/keys, performance basics (memo when it matters, not trivia).                                                    |
+| **Vanilla JS**        | Arrays / objects, `async/await`, Promises, closures, modules — they say **JS fundamentals** explicitly.                                                                      |
+| **MUI**               | **Layout:** `Box`, `Stack`, `Container`, **Grid** / **Grid2** (know both exist). **Inputs** and **forms**. **Theme** + `**sx`**. **Dialogs** / **AppBar** patterns.          |
 | **Emotion (via MUI)** | You mostly learn this as **MUI styling**: `sx`, `styled`, theme overrides — **Emotion** is the engine that generates the `css-*` classes in DevTools, not a separate UI kit. |
-| **React Router** | Nested routes, loaders if v6.4+ (if you use them), protected routes conceptually. |
-| **Testing** | **Jest + React Testing Library**: query by role/label, user events, mock `fetch`. |
+| **React Router**      | Nested routes, loaders if v6.4+ (if you use them), protected routes conceptually.                                                                                            |
+| **Testing**           | **Jest + React Testing Library**: query by role/label, user events, mock `fetch`.                                                                                            |
+
 
 ### Tier 2 — strong differentiator (Trama / ASH fit)
 
-| Area | What to drill |
-|------|----------------|
-| **a11y** | **508/WCAG** mindset: focus, labels, keyboard nav, **MUI** + a11y gotchas (modals, announcements). |
+
+| Area                | What to drill                                                                                                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **a11y**            | **508/WCAG** mindset: focus, labels, keyboard nav, **MUI** + a11y gotchas (modals, announcements).                                                                                        |
 | **API integration** | REST-shaped work: loading/error/empty, **don’t** block on C# — but know how a **frontend** consumes **versioned** HTTP APIs and handles **auth cookies** / session story at a high level. |
-| **Enterprise SPA** | **Config / feature flags** from a host (their **`$$params` + `React*`-style toggles** story): render paths by flag, don’t overfit one bundle. |
-| **Perf** | **CWV** language, code splitting, **MUI** bundle awareness (import discipline). |
-| **Behavioral** | 2–3 **STAR** stories: **a11y**, **DS / reusable UI**, **perf**, **cross-functional** (PM/UX), **mentoring** — Trama “hires and coaches.” |
+| **Enterprise SPA**  | **Config / feature flags** from a host (their `**$$params` + `React*`-style toggles** story): render paths by flag, don’t overfit one bundle.                                             |
+| **Perf**            | **CWV** language, code splitting, **MUI** bundle awareness (import discipline).                                                                                                           |
+| **Behavioral**      | 2–3 **STAR** stories: **a11y**, **DS / reusable UI**, **perf**, **cross-functional** (PM/UX), **mentoring** — Trama “hires and coaches.”                                                  |
+
 
 ### Tier 3 — know the exist; deep-dive if interview says so
 
@@ -157,7 +161,7 @@ Public signals + hydrated DOM point at **React + React Router + MUI (Emotion und
 
 ### Quick lab (optional)
 
-- Skim a live **Active&Fit** or **Silver&Fit** home in DevTools: **`#root`**, **Mui***, **`css-*`** — matches what you’d ship with **MUI**.
+- Skim a live **Active&Fit** or **Silver&Fit** home in DevTools: `**#root`**, **Mui***, `**css-*`** — matches what you’d ship with **MUI**.
 
 ---
 

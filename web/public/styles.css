@@ -342,10 +342,56 @@ tr:hover td {
   font-size: 0.82rem;
 }
 
+/** applications.md Notes: Gmail lines, dated status log, bullets — bounded height, filter still indexes full text via innerText */
+.notes-cell {
+  min-width: 12rem;
+  max-width: 28rem;
+  font-size: 0.78rem;
+  line-height: 1.42;
+  color: var(--text);
+}
+
+.notes-cell.notes-empty {
+  color: var(--muted);
+}
+
+.notes-scroll {
+  max-height: 14rem;
+  overflow: auto;
+  padding-right: 0.25rem;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .links a {
   color: var(--accent);
   margin-right: 0.5rem;
   white-space: nowrap;
+}
+
+/* <button> styled as a link — avoids <a> default nav in embed browsers (see app.js) */
+button.report-link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+button.report-link:hover {
+  filter: brightness(1.1);
+}
+button.report-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .foot {
@@ -535,3 +581,49 @@ code {
   line-height: 1.35;
   word-break: break-word;
 }
+
+/* Search health page */
+.sh-chart {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+}
+
+.sh-chart canvas {
+  max-height: 300px !important;
+}
+
+.sh-signals-wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 0 1.5rem 2rem;
+}
+
+.sh-signals ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.sh-mini {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sh-mini th,
+.sh-mini td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+}
+
+#shAsOf {
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+

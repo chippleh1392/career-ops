@@ -58,6 +58,19 @@ for (const f of mjsFiles) {
   }
 }
 
+const libDir = join(ROOT, 'lib');
+if (existsSync(libDir)) {
+  for (const f of readdirSync(libDir).filter((x) => x.endsWith('.mjs'))) {
+    const rel = join('lib', f);
+    const result = run('node', ['--check', rel]);
+    if (result !== null) {
+      pass(`${rel} syntax OK`);
+    } else {
+      fail(`${rel} has syntax errors`);
+    }
+  }
+}
+
 // ── 2. SCRIPT EXECUTION ─────────────────────────────────────────
 
 console.log('\n2. Script execution (graceful on empty data)');
@@ -68,6 +81,8 @@ const scripts = [
   { name: 'normalize-statuses.mjs', expectExit: 0 },
   { name: 'dedup-tracker.mjs', expectExit: 0 },
   { name: 'merge-tracker.mjs', expectExit: 0 },
+  { name: 'backfill-tracker-events.mjs --dry-run', expectExit: 0 },
+  { name: 'analyze-search-health.mjs', expectExit: 0 },
   { name: 'update-system.mjs check', expectExit: 0 },
 ];
 

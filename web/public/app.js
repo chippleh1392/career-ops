@@ -227,6 +227,13 @@ function renderMetrics(m, pm) {
   `;
 }
 
+/** Notes column: newline → <br> after per-line escape. */
+function formatNotesHtml(raw) {
+  const s = String(raw ?? '').replace(/\r\n/g, '\n').trim();
+  if (!s) return '';
+  return s.split('\n').map((ln) => esc(ln)).join('<br>');
+}
+
 function rowHtml(app) {
   const reportUrl = app.reportPath
     ? `/api/report?path=${encodeURIComponent(app.reportPath)}`
@@ -238,9 +245,17 @@ function rowHtml(app) {
   const job = app.jobURL
     ? `<a href="${esc(app.jobURL)}" target="_blank" rel="noreferrer">Job</a>`
     : '';
+  const reportCell =
+    app.reportPath && absoluteReportUrl !== '#'
+      ? `<button type="button" class="report-link" data-report-href="${esc(absoluteReportUrl)}" aria-label="Open report ${esc(String(app.reportNumber))}">#${esc(app.reportNumber)}</button>`
+      : '—';
   const statusClass = `status status-${String(app.status || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')}`;
+  const notesInner = formatNotesHtml(app.notes);
+  const notesCell = notesInner
+    ? `<td class="notes-cell"><div class="notes-scroll">${notesInner}</div></td>`
+    : '<td class="notes-cell notes-empty">—</td>';
   return `<tr data-row>
     <td>${app.number}</td>
     <td>${esc(app.date)}</td>
@@ -248,8 +263,9 @@ function rowHtml(app) {
     <td>${esc(app.role)}</td>
     <td>${esc(app.scoreRaw || '')}</td>
     <td><span class="${statusClass}">${esc(app.status)}</span></td>
-    <td><a href="${esc(absoluteReportUrl)}" target="_blank" rel="noopener" data-report-link>#${esc(app.reportNumber)}</a></td>
+    <td>${reportCell}</td>
     <td class="tldr">${esc(app.tldr || '')}</td>
+    ${notesCell}
     <td class="links">${job}</td>
   </tr>`;
 }
@@ -288,18 +304,75 @@ async function load() {
 $('filter').addEventListener('input', applyFilter);
 $('btnRefresh').addEventListener('click', load);
 
-$('tbody').addEventListener('click', (e) => {
-  const link = e.target.closest('[data-report-link]');
-  if (!link || !link.href || link.href.endsWith('#')) return;
-  e.preventDefault();
+/**
+ * Report: <button> + data-report-href only (no <a> default).
+ * Important: do NOT call location.assign when window.open "fails" in the same
+ * turn as a successful open — some embeds (incl. Cursor) can return null from
+ * a *second* window.open, or from one call after a tab already opened, which
+ * was causing current tab + new tab to both show the report.
+ * If new tab is blocked, show a one-click fallback in the banner (separate user gesture).
+ */
+let lastReportOpen = { url: '', t: 0 };
+function showReportOpenFallback(url) {
+  const b = $('banner');
+  b.className = 'banner';
+  b.innerHTML = `Could not open a new window. <a class="btn-link" href="${esc(
+    url,
+  )}">Open report in this tab</a> · <button type="button" class="btn-link" data-dismiss-banner>Dismiss</button>`;
+  b.classList.remove('hidden');
+  b.querySelector('[data-dismiss-banner]')?.addEventListener('click', () => {
+    b.classList.add('hidden');
+  });
+}
 
-  const opened = window.open(link.href, '_blank');
-  if (opened) {
-    opened.opener = null;
-  } else {
-    window.location.href = link.href;
+function openReportFromControl(el) {
+  const url = el?.dataset?.reportHref;
+  if (!url) return;
+  const now = Date.now();
+  if (url === lastReportOpen.url && now - lastReportOpen.t < 500) {
+    return;
   }
-});
+  lastReportOpen = { url, t: now };
+  const w = window.open(url, '_blank');
+  if (w) {
+    try {
+      w.opener = null;
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  // Single popup blocked — offer explicit same-tab (second gesture), no auto-assign
+  showReportOpenFallback(url);
+}
+
+document.addEventListener(
+  'click',
+  (e) => {
+    if (e.button !== 0) return;
+    const el = e.target.closest('[data-report-href]');
+    if (!el) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openReportFromControl(el);
+  },
+  true,
+);
+
+/** Middle-click: new tab only (no same-tab fallback) */
+document.addEventListener(
+  'auxclick',
+  (e) => {
+    if (e.button !== 1) return;
+    const el = e.target.closest('[data-report-href]');
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const url = el.dataset.reportHref;
+    if (url) window.open(url, '_blank');
+  },
+  true,
+);
 
 document.querySelector('table thead')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.th-sort');

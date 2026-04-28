@@ -21,7 +21,13 @@
     "market:refresh": "node market-import.mjs && node market-score.mjs && node market-analyze.mjs",
     "market:sync-batch": "node market-sync-batch.mjs",
     "web": "node web/server.mjs",
-    "web:dashboard": "node web/server.mjs"
+    "web:dashboard": "node web/server.mjs",
+    "gmail:auth": "node gmail.mjs auth",
+    "gmail:search": "node gmail.mjs search",
+    "gmail:audit": "node gmail-tracker-audit.mjs",
+    "tracker:events:backfill": "node backfill-tracker-events.mjs",
+    "search:health": "node analyze-search-health.mjs",
+    "search:health:report": "node analyze-search-health.mjs --write --summary"
   },
   "keywords": [
     "ai",
@@ -38,6 +44,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "googleapis": "^171.4.0",
     "js-yaml": "^4.1.1",
     "playwright": "^1.58.1",
     "showdown": "^2.1.0",
