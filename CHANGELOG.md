@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/chippleh1392/career-ops/compare/v1.5.0...v1.6.0) (2026-04-28)
+
+
+### Features
+
+* market scoring, web dashboard, ASH interview prep, hydrated DOM script ([7d78581](https://github.com/chippleh1392/career-ops/commit/7d7858132e746a48894e16f29fde9f5df220b41c))
+* search health dashboard, tracker events pipeline, Gmail audit scripts ([22e2243](https://github.com/chippleh1392/career-ops/commit/22e2243a220466098de5cabc7a521081c4b8f624))
+
 ## [1.5.0](https://github.com/santifer/career-ops/compare/v1.4.0...v1.5.0) (2026-04-14)
 
 
