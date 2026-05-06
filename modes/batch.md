@@ -1,106 +1,105 @@
-# Mode: batch — Large-Volume Job Processing
+# Mode: batch — Mass Processing of Jobs
 
-There are two ways to use batch mode:
-- conductor mode with a live browser session
-- standalone mode for already collected URLs
+Two usage modes: **conductor --chrome** (navigates portals in real time) or **standalone** (script for URLs already collected).
 
 ## Architecture
 
 ```text
-Conductor agent
-  -> navigates job portals
-  -> reads JD content
-  -> hands each offer to a worker backend
-  -> merges tracker additions at the end
+Conductor (headed browser mode)
+  │
+  │  Chrome: navigates portals (logged-in sessions)
+  │  Reads DOM directly — the user sees everything in real time
+  │
+  ├─ Job 1: reads JD from DOM + URL
+  │    └─► headless worker → report .md + PDF + tracker-line
+  │
+  ├─ Job 2: click next, read JD + URL
+  │    └─► headless worker → report .md + PDF + tracker-line
+  │
+  └─ End: merge tracker-additions → applications.md + summary
 ```
 
-The worker backend can be:
-- `claude`
-- `codex`
-- `manual`
+Each worker is a headless child process with a clean 200K token context. The conductor only orchestrates. See the **Headless / Batch Mode** table in `AGENTS.md` for the correct command per CLI.
 
 ## Files
 
 ```text
 batch/
-  batch-input.tsv
-  batch-state.tsv
-  batch-runner.sh
-  batch-runner.ps1
-  batch-prompt.md
-  batch-output-schema.json
-  logs/
-  tracker-additions/
-  manual-work-items/
+  batch-input.tsv               # URLs (from conductor or manual)
+  batch-state.tsv               # Progress (auto-generated, gitignored)
+  batch-runner.sh               # Standalone orchestrator script
+  batch-prompt.md               # Prompt template for workers
+  logs/                         # One log per job (gitignored)
+  tracker-additions/            # Tracker lines (gitignored)
 ```
 
-## Conductor Flow
+## Mode A: Conductor --chrome
 
-1. Read `batch/batch-state.tsv`
-2. Navigate the portal
-3. Collect job URLs into `batch/batch-input.tsv`
-4. For each pending URL:
-   - read the JD
-   - save the JD text if needed
-   - compute the next report number
-   - run the worker backend
-   - update state
-   - move to the next result
-5. Merge tracker additions into `data/applications.md`
+1. **Read state**: `batch/batch-state.tsv` → identify what has already been processed
+2. **Navigate portal**: Chrome → search URL
+3. **Extract URLs**: Read results DOM → extract URL list → append to `batch-input.tsv`
+4. **For each pending URL**:
+   a. Chrome: click on the job → read JD text from the DOM
+   b. Save JD to `/tmp/batch-jd-{id}.txt`
+   c. Calculate next sequential REPORT_NUM
+   d. Execute via Bash:
 
-## Standalone Scripts
+      ```bash
+      # Use your CLI's headless command (see AGENTS.md — Headless / Batch Mode)
+      <headless-cmd> "Process this job. URL: {url}. JD: /tmp/batch-jd-{id}.txt. Report: {num}. ID: {id}"
+      ```
 
-Unix-like:
+   e. Update `batch-state.tsv` (completed/failed + score + report_num)
+   f. Log to `logs/{report_num}-{id}.log`
+   g. Chrome: go back → next job
+5. **Pagination**: If no more jobs → click "Next" → repeat
+6. **End**: Merge `tracker-additions/` → `applications.md` + summary
+
+## Mode B: Standalone script
 
 ```bash
 batch/batch-runner.sh [OPTIONS]
 ```
 
-Windows PowerShell:
+Options:
+- `--dry-run` — list pending jobs without executing
+- `--retry-failed` — retry only failed jobs
+- `--start-from N` — start from ID N
+- `--parallel N` — N workers in parallel
+- `--max-retries N` — attempts per job (default: 2)
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\batch\batch-runner.ps1 [OPTIONS]
-```
-
-Important options:
-- `--agent` or `-Agent` with `claude|codex|manual|auto`
-- dry run mode
-- retry failed mode
-- start from a specific ID
-- max retries
-- parallel worker count where supported
-
-## State File
+## batch-state.tsv Format
 
 ```text
 id	url	status	started_at	completed_at	report_num	score	error	retries
+1	https://...	completed	2026-...	2026-...	002	4.2	-	0
+2	https://...	failed	2026-...	2026-...	-	-	Error msg	1
+3	https://...	pending	-	-	-	-	-	0
 ```
 
 ## Resumability
 
-- completed rows are skipped by default
-- failed rows are only retried when retry mode is explicitly requested
-- lock files prevent double execution
-- one failed job must not block the rest of the queue
+- If it crashes → re-run → reads `batch-state.tsv` → skip completed jobs
+- Lock file (`batch-runner.pid`) prevents double execution
+- Each worker is independent: failure in job #47 does not affect the others
 
-## Worker Outputs
+## Workers (headless mode)
 
-Each successful worker should produce:
-1. a Markdown report in `reports/`
-2. a PDF in `output/`
-3. one tracker TSV line in `batch/tracker-additions/`
-4. one structured JSON result
+Each worker receives `batch-prompt.md` as a system prompt. It is self-contained. Use your CLI's headless command — see the **Headless / Batch Mode** table in `AGENTS.md`.
 
-## Error Handling
+The worker produces:
+1. `.md` report in `reports/`
+2. PDF in `output/`
+3. Tracker line in `batch/tracker-additions/{id}.tsv`
+4. Result JSON via stdout
 
-| Failure | Recovery |
-|---|---|
-| inaccessible URL | mark failed and continue |
-| login-only JD | mark failed unless the conductor can read the DOM |
-| portal layout change | adapt extraction if possible, otherwise fail cleanly |
-| worker crash | mark failed and continue |
-| PDF failure | keep the report and mark PDF as missing |
+## Error handling
 
-### Language Rule
-
-All generated batch artifacts must be English only.
+| Error | Recovery |
+|-------|----------|
+| URL inaccessible | Worker fails → conductor marks `failed`, continues |
+| JD behind login | Conductor attempts to read DOM. If it fails → `failed` |
+| Portal changes layout | Conductor reasons about HTML, adapts |
+| Worker crashes | Conductor marks `failed`, continues. Retry with `--retry-failed` |
+| Conductor crashes | Re-run → reads state → skip completed jobs |
+| PDF fails | .md report is saved. PDF remains pending |

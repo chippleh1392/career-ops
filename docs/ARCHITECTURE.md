@@ -4,8 +4,8 @@
 
 ```
                     ┌─────────────────────────────────┐
-                    │         Claude Code Agent        │
-                    │   (reads CLAUDE.md + modes/*.md) │
+                    │         AI Coding CLI Agent      │
+                    │   (reads AGENTS.md + modes/*.md) │
                     └──────────┬──────────────────────┘
                                │
             ┌──────────────────┼──────────────────────┐
@@ -17,14 +17,8 @@
             │                  │                       │
             │           ┌──────▼──────┐          ┌────▼─────┐
             │           │ pipeline.md │          │ N workers│
-            │           │ (URL inbox) │          │ (claude/codex/manual)
-            │           └──────┬──────┘          └────┬─────┘
-            │                  │                       │
-            │           ┌──────▼───────────────────────▼──────┐
-            │           │        Market Scan Layer                   │
-            │           │ direct ATS import + browser fallback       │
-            │           │ → normalize → score → analyze → shortlist  │
-            │           └───────────────────────────────────────┘
+            │           │ (URL inbox) │          │ (headless)
+            │           └─────────────┘          └────┬─────┘
             │                                          │
      ┌──────▼──────────────────────────────────────────▼──────┐
      │                    Output Pipeline                      │
@@ -62,14 +56,14 @@
 The batch system processes multiple offers in parallel:
 
 ```
-batch-input.tsv    →  batch-runner.sh  →  N backend workers
-(id, url, source)     (orchestrator)       (claude/codex/manual)
+batch-input.tsv    →  batch-runner.sh  →  N × headless CLI workers
+(id, url, source)     (orchestrator)       (self-contained prompt)
                            │
                     batch-state.tsv
                     (tracks progress)
 ```
 
-Each worker receives the full `batch-prompt.md` as context through the selected backend. Workers produce:
+Each worker is a headless AI CLI instance — the bundled `batch-runner.sh` invokes `claude -p`, but the architecture supports any CLI's headless mode (see the Headless / Batch Mode table in `AGENTS.md` for the correct command per CLI). Workers produce:
 - Report .md
 - PDF
 - Tracker TSV line
@@ -85,10 +79,6 @@ config/profile.yml       →  Candidate identity
 portals.yml              →  Scanner configuration
 templates/states.yml     →  Canonical status values
 templates/cv-template.html → PDF generation template
-data/market/jobs.jsonl   →  Normalized market dataset
-data/market/jobs-scored.jsonl → Lightweight fit scores
-data/market/market-report.md → Volume-based market analysis (source, freshness, title, remote, salary)
-data/market/deep-eval-queue.tsv → Batch-ready shortlist
 ```
 
 ## File Naming Conventions

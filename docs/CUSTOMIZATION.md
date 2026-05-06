@@ -28,8 +28,8 @@ Also update the "Adaptive Framing" table to map YOUR specific projects to each a
 
 Copy from `templates/portals.example.yml` and customize:
 
-1. **title_filter.commerce** / **title_filter.general**: Two keyword sets for market scoring (`market-score.mjs`). Commerce applies when a job matches the Shopify/commerce detector; general applies otherwise. Each has `positive` / `negative`; commerce adds `seniority_boost`, general adds `seniority_penalty` for senior title tokens.
-2. Legacy single-block **`title_filter`** (only `positive` / `negative` / `seniority_boost`) still works and is split automatically for scoring until you migrate.
+1. **title_filter.positive**: Keywords matching your target roles
+2. **title_filter.negative**: Tech stacks or domains to exclude
 3. **search_queries**: WebSearch queries for job boards (Ashby, Greenhouse, Lever)
 4. **tracked_companies**: Companies to check directly
 
