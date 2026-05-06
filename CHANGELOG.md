@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.8.0](https://github.com/chippleh1392/career-ops/compare/career-ops-v1.7.0...career-ops-v1.8.0) (2026-05-06)
+
+
+### Features
+
+* adapt contacto mode by contact type (recruiter/HM/peer/interviewer) ([f141cf5](https://github.com/chippleh1392/career-ops/commit/f141cf513cdefb325667059592c62c9b58063e6a))
+* add --min-score flag to batch runner ([#249](https://github.com/chippleh1392/career-ops/issues/249)) ([4039e81](https://github.com/chippleh1392/career-ops/commit/4039e810a5a4ea7c1e1191b2f1c81f04ed8c2a30))
+* add {{PHONE}} placeholder to CV template ([#287](https://github.com/chippleh1392/career-ops/issues/287)) ([dc490c2](https://github.com/chippleh1392/career-ops/commit/dc490c2465a6c0a5c1d03d0a944b04b35029ae0c))
+* add Block G — posting legitimacy assessment ([951be78](https://github.com/chippleh1392/career-ops/commit/951be78ce7c024a039d5c662ee17bde834cdd1d3))
+* add follow-up cadence tracker mode ([200652f](https://github.com/chippleh1392/career-ops/commit/200652f9cb543458515c9f32faf5bdd7c587bffc))
+* add GitHub Actions CI + auto-labeler + welcome bot + /run skill ([3018aa1](https://github.com/chippleh1392/career-ops/commit/3018aa1004864eff9018a25f9edc375198a22c2d))
+* add Nix flake devshell with Playwright support ([72077a9](https://github.com/chippleh1392/career-ops/commit/72077a9e2639eb13bcdd86084cde9a4d228b2f8c))
+* add OpenCode slash commands for career-ops ([#67](https://github.com/chippleh1392/career-ops/issues/67)) ([049a795](https://github.com/chippleh1392/career-ops/commit/049a79544fa83cfae0f3307035ffc81b51af08a2))
+* add scan.mjs — zero-token portal scanner ([e5592ba](https://github.com/chippleh1392/career-ops/commit/e5592ba8142ef4bd647ab4169588a0ff85985160))
+* **dashboard:** add Catppuccin Latte light theme with auto-detection ([34230da](https://github.com/chippleh1392/career-ops/commit/34230da1116023ceb93523b9eaeca33e1b4fdd21))
+* **dashboard:** add manual refresh shortcut ([#246](https://github.com/chippleh1392/career-ops/issues/246)) ([06546e4](https://github.com/chippleh1392/career-ops/commit/06546e4aca46b8e298a88355d13dc2d8f76cfcf4))
+* **dashboard:** add progress analytics screen ([415fb14](https://github.com/chippleh1392/career-ops/commit/415fb14f3439ce49b8ec32ee63ebd81c52f0a00b))
+* **dashboard:** add vim motions to pipeline screen ([#262](https://github.com/chippleh1392/career-ops/issues/262)) ([c25471b](https://github.com/chippleh1392/career-ops/commit/c25471b89eede93f9ed82e5e16c03a650587d0d5))
+* **dashboard:** aligned tables and markdown syntax rendering in viewer ([5479edc](https://github.com/chippleh1392/career-ops/commit/5479edc300c4ab8bd3a526732a1f7a456a3071e3))
+* expand portals.example.yml with 8 dev-tools companies + 23 search queries ([#140](https://github.com/chippleh1392/career-ops/issues/140)) ([641fdf7](https://github.com/chippleh1392/career-ops/commit/641fdf759bc0b47d43c1c4906fa919b634c01670))
+* **i18n:** add Japanese README + language modes for Japan market ([1184df6](https://github.com/chippleh1392/career-ops/commit/1184df6646452cd924a04f38ae8a42fe772d4543))
+* market scoring, web dashboard, ASH interview prep, hydrated DOM script ([7d78581](https://github.com/chippleh1392/career-ops/commit/7d7858132e746a48894e16f29fde9f5df220b41c))
+* search health dashboard, tracker events pipeline, Gmail audit scripts ([22e2243](https://github.com/chippleh1392/career-ops/commit/22e2243a220466098de5cabc7a521081c4b8f624))
+
+
+### Bug Fixes
+
+* 10 bug fixes — resource leaks, command injection, Unicode, navigation ([ed7da33](https://github.com/chippleh1392/career-ops/commit/ed7da3338812298d3f2115159991fcc4bcad5ae0))
+* add data/ fallback to UpdateApplicationStatus ([#55](https://github.com/chippleh1392/career-ops/issues/55)) ([66ef772](https://github.com/chippleh1392/career-ops/commit/66ef77209fbd755ef5d1c6eb0daae0678f5d7a4d))
+* add stopword filtering and overlap ratio to roleMatch ([#248](https://github.com/chippleh1392/career-ops/issues/248)) ([7b5b756](https://github.com/chippleh1392/career-ops/commit/7b5b756d6a400d4c2aa08f8aa4f4237850eba3e7))
+* align portals.example.yml indentation for new companies ([9e64e51](https://github.com/chippleh1392/career-ops/commit/9e64e515a3e80dbaca7410f799493e3c38b8faaa))
+* **ci:** use pull_request_target for labeler on fork PRs ([#260](https://github.com/chippleh1392/career-ops/issues/260)) ([54049d4](https://github.com/chippleh1392/career-ops/commit/54049d427b6bba81559c40b0769e98a2367ffd03))
+* correct _shared.md → _profile.md reference in CUSTOMIZATION.md (closes [#137](https://github.com/chippleh1392/career-ops/issues/137)) ([3029685](https://github.com/chippleh1392/career-ops/commit/3029685376088786dfa24a3608b71cd28b58937f))
+* correct dashboard launch path in docs ([#80](https://github.com/chippleh1392/career-ops/issues/80)) ([1d6583c](https://github.com/chippleh1392/career-ops/commit/1d6583c1122d08590a17816d3dd41bceeb11565c))
+* **dashboard:** show dates in pipeline list ([#298](https://github.com/chippleh1392/career-ops/issues/298)) ([8589d6e](https://github.com/chippleh1392/career-ops/commit/8589d6ef78f2b438b56b03163bbc9011d093f5eb))
+* ensure data/ and output/ dirs exist before writing in scripts ([#261](https://github.com/chippleh1392/career-ops/issues/261)) ([0192644](https://github.com/chippleh1392/career-ops/commit/0192644e52e1ea2f9d81ade5280d3eb75b8ad595))
+* filter expired WebSearch links before they reach the pipeline ([#57](https://github.com/chippleh1392/career-ops/issues/57)) ([4593257](https://github.com/chippleh1392/career-ops/commit/4593257615c444460be0ec3f070214f386897360))
+* improve default PDF readability ([#85](https://github.com/chippleh1392/career-ops/issues/85)) ([2b54384](https://github.com/chippleh1392/career-ops/commit/2b54384bc47b4dcbe0b032bb2194f372a0fc59b5))
+* liveness checks ignore nav/footer Apply text, expired signals win ([464f62e](https://github.com/chippleh1392/career-ops/commit/464f62e47fcede6c0ddc89a8d4185ab86b6c0dbc))
+* remove wellfound, lever and remotefront from portals.example.yml ([#286](https://github.com/chippleh1392/career-ops/issues/286)) ([8cab764](https://github.com/chippleh1392/career-ops/commit/8cab76417c9d93c44e9b3e1323470579942f19f2))
+* replace grep -P with POSIX-compatible grep in batch-runner.sh ([5982455](https://github.com/chippleh1392/career-ops/commit/5982455e0ca00f755f01fdf5d8c3e6801c19c569))
+* test-all.mjs scans only git-tracked files, avoids false positives ([9a7d3cd](https://github.com/chippleh1392/career-ops/commit/9a7d3cd0e862b7414eeb0b28070d86913bc5a600))
+* use candidate name from profile.yml in PDF filename ([7ba752b](https://github.com/chippleh1392/career-ops/commit/7ba752bceb1e00d6d87f5b731f4eb0af6dc59a02))
+* use execFileSync to prevent shell injection in test-all.mjs ([601094c](https://github.com/chippleh1392/career-ops/commit/601094c6b0a7f3ddb1f6ccff932dcdf7104504fb))
+* use fileURLToPath for cross platform compatible paths in tracker scripts ([#32](https://github.com/chippleh1392/career-ops/issues/32)) ([#58](https://github.com/chippleh1392/career-ops/issues/58)) ([1f4ac28](https://github.com/chippleh1392/career-ops/commit/1f4ac282889ade000938c695095ac0140286a8ac))
+* use hi@santifer.io in English README ([20d3b63](https://github.com/chippleh1392/career-ops/commit/20d3b63b898fa5a33c177b113ec072ce57bcede8))
+
+
+### Performance Improvements
+
+* compress hero banner from 5.7MB to 671KB ([b6f5e88](https://github.com/chippleh1392/career-ops/commit/b6f5e881584147899f192d1b5d51e3892580b677))
+
 ## [1.7.0](https://github.com/santifer/career-ops/compare/career-ops-v1.6.0...career-ops-v1.7.0) (2026-05-06)
 
 
