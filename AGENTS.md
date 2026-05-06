@@ -93,14 +93,18 @@ Whenever you change the **`Status`** column for an existing row (e.g. `Evaluated
 
 Rationale: there are no separate `applied_at` columns today; this keeps an explicit, grep-friendly history in-repo without relying on agent memory.
 
-## Cursor MCP handoff — Gmail (Apr 2026)
+## Gmail API (canonical — not MCP)
 
-- **Config:** User’s **Gmail MCP** is in global `~/.cursor/mcp.json` (hosted URL `https://gmailmcp.googleapis.com/mcp/v1`), with OAuth client credentials inlined locally (treat as secret; do not commit or paste into chat).
-- **Google Cloud:** OAuth consent screen was moved **out of Testing** (**published** / in production) so consent is not limited to test users.
-- **Cursor UI:** **Tools → gmail** shows **on**, green, **10 tools**, **Logout** — indicates IDE-side connection.
-- **Agent limitation:** In some **Composer / agent sessions**, `call_mcp_tool` for `user-gmail` **does not appear** in the tool list (`user-gmail-search_threads not found` while Figma/Shopify/browser still work). **Publishing GCP does not fix that** — it is session/host wiring, not consent.
-- **How to verify:** New **Agent** message in this project; or **Logout** next to gmail and re-auth after publish; ask the agent to run **`search_threads`** with something small (e.g. `newer_than:7d`, `pageSize` 5) and return subjects only.
-- **Planned follow-up (when Gmail tools are callable):** Optional **tracker backfill** — search Gmail for application/reply threads, propose matches for rows past `Evaluated`, user confirms, then prepend `{YYYY-MM-DD}: {Status}.` to **Notes** per **Status change log** above.
+Inbox reads and tracker evidence use the **Gmail API** from this repo. **Do not** rely on a Gmail MCP or IDE “Gmail tools” for this workflow.
+
+- **Scripts:** `gmail.mjs` (OAuth + search), `gmail-tracker-audit.mjs` (backfill ack/rejection lines into `data/applications.md` Notes for non-`Evaluated` rows).
+- **npm:** `npm run gmail:auth`, `npm run gmail:search -- "<gmail-query>"`, `npm run gmail:audit`
+- **Secrets (gitignored):** `private/client_secret*.json` (Google OAuth client), `private/gmail-token.json` (refresh token). Optional env: `GMAIL_CLIENT_SECRET_JSON`, `GMAIL_TOKEN_JSON`, `GMAIL_MAX_RESULTS` (default 10, max 100 for search).
+- **First-time auth:** `node gmail.mjs auth` (or `npm run gmail:auth`) — completes OAuth; token saved to `private/gmail-token.json`.
+- **Search examples:** `node gmail.mjs search "from:acme.com newer_than:14d"` — query syntax matches the Gmail search box.
+- **After manual Notes edits** (including Gmail-derived lines): `npm run tracker:events:backfill`. The audit script merges `gmail_*` events when it writes Notes.
+
+Agents should **`run_terminal_cmd`** these commands rather than assuming an MCP is available.
 
 ## Safety
 

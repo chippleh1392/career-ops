@@ -3,16 +3,18 @@
 /**
  * scan.mjs — Zero-token portal scanner
  *
- * Fetches Greenhouse, Ashby, and Lever APIs directly, applies title
- * filters from portals.yml, deduplicates against existing history,
- * and appends new offers to pipeline.md + scan-history.tsv.
+ * Fetches Greenhouse, Ashby, Lever APIs (per tracked_companies) plus
+ * Remotive’s public JSON API when enabled in portals.yml. Applies
+ * title filters, deduplicates, and appends new offers to
+ * pipeline.md + scan-history.tsv.
  *
  * Zero Claude API tokens — pure HTTP + JSON.
  *
  * Usage:
- *   node scan.mjs                  # scan all enabled companies
+ *   node scan.mjs                  # scan all enabled companies + Remotive
  *   node scan.mjs --dry-run        # preview without writing files
- *   node scan.mjs --company Cohere # scan a single company
+ *   node scan.mjs --company Cohere # scan a single company (Remotive skipped)
+ *   node scan.mjs --remotive-only  # only Remotive API + same title_filter / dedupe
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
@@ -31,6 +33,7 @@ mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
 const FETCH_TIMEOUT_MS = 10_000;
+const REMOTIVE_API = 'https://remotive.com/api/remote-jobs';
 
 // ── API detection ───────────────────────────────────────────────────
 
@@ -105,6 +108,30 @@ function parseLever(json, companyName) {
 }
 
 const PARSERS = { greenhouse: parseGreenhouse, ashby: parseAshby, lever: parseLever };
+
+// ── Remotive API ────────────────────────────────────────────────────
+// Docs: https://remotive.com/api-documentation
+// Use sparingly (Remotive asks ~max ~4 GETs/day for the public API).
+
+function buildRemotiveUrl(cfg = {}) {
+  const params = new URLSearchParams();
+  if (cfg.category) params.set('category', cfg.category);
+  if (cfg.search) params.set('search', cfg.search);
+  if (cfg.company_name) params.set('company_name', cfg.company_name);
+  if (cfg.limit != null && cfg.limit !== '') params.set('limit', String(cfg.limit));
+  const q = params.toString();
+  return q ? `${REMOTIVE_API}?${q}` : REMOTIVE_API;
+}
+
+function parseRemotive(json) {
+  const jobs = json.jobs || [];
+  return jobs.map((j) => ({
+    title: j.title || '',
+    url: j.url || '',
+    company: j.company_name || '',
+    location: j.candidate_required_location || '',
+  }));
+}
 
 // ── Fetch with timeout ──────────────────────────────────────────────
 
@@ -268,8 +295,14 @@ async function parallelFetch(tasks, limit) {
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
+  const remotiveOnly = args.includes('--remotive-only');
   const companyFlag = args.indexOf('--company');
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
+
+  if (remotiveOnly && filterCompany) {
+    console.error('Use either --remotive-only or --company, not both.');
+    process.exit(1);
+  }
 
   // 1. Read portals.yml
   if (!existsSync(PORTALS_PATH)) {
@@ -282,15 +315,32 @@ async function main() {
   const titleFilter = buildTitleFilterFromConfig(config);
 
   // 2. Filter to enabled companies with detectable APIs
-  const targets = companies
+  let targets = companies
     .filter(c => c.enabled !== false)
     .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany))
     .map(c => ({ ...c, _api: detectApi(c) }))
     .filter(c => c._api !== null);
 
+  if (remotiveOnly) {
+    targets = [];
+  }
+
   const skippedCount = companies.filter(c => c.enabled !== false).length - targets.length;
 
-  console.log(`Scanning ${targets.length} companies via API (${skippedCount} skipped — no API detected)`);
+  const remotiveCfgEarly = config.remotive || {};
+  if (remotiveOnly && remotiveCfgEarly.enabled === false) {
+    console.error('Error: remotive.enabled is false in portals.yml.');
+    process.exit(1);
+  }
+
+  if (remotiveOnly) {
+    console.log('Remotive-only scan (same title_filter + dedupe as full scan).');
+  } else {
+    const willRemotive = remotiveCfgEarly.enabled !== false && !filterCompany;
+    console.log(
+      `Scanning ${targets.length} companies via API (${skippedCount} skipped — no API detected)${willRemotive ? ' + Remotive' : ''}`
+    );
+  }
   if (dryRun) console.log('(dry run — no files will be written)\n');
 
   // 3. Load dedup sets
@@ -305,38 +355,89 @@ async function main() {
   const newOffers = [];
   const errors = [];
 
-  const tasks = targets.map(company => async () => {
+  function ingestJobs(jobs, source) {
+    totalFound += jobs.length;
+    for (const job of jobs) {
+      if (!job.url) continue;
+      if (!titleFilter(job.title)) {
+        totalFiltered++;
+        continue;
+      }
+      if (seenUrls.has(job.url)) {
+        totalDupes++;
+        continue;
+      }
+      const key = `${String(job.company).toLowerCase()}::${job.title.toLowerCase()}`;
+      if (seenCompanyRoles.has(key)) {
+        totalDupes++;
+        continue;
+      }
+      seenUrls.add(job.url);
+      seenCompanyRoles.add(key);
+      newOffers.push({ ...job, source });
+    }
+  }
+
+  const tasks = targets.map((company) => async () => {
     const { type, url } = company._api;
     try {
       const json = await fetchJson(url);
       const jobs = PARSERS[type](json, company.name);
-      totalFound += jobs.length;
-
-      for (const job of jobs) {
-        if (!titleFilter(job.title)) {
-          totalFiltered++;
-          continue;
-        }
-        if (seenUrls.has(job.url)) {
-          totalDupes++;
-          continue;
-        }
-        const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
-        if (seenCompanyRoles.has(key)) {
-          totalDupes++;
-          continue;
-        }
-        // Mark as seen to avoid intra-scan dupes
-        seenUrls.add(job.url);
-        seenCompanyRoles.add(key);
-        newOffers.push({ ...job, source: `${type}-api` });
-      }
+      ingestJobs(jobs, `${type}-api`);
     } catch (err) {
       errors.push({ company: company.name, error: err.message });
     }
   });
 
   await parallelFetch(tasks, CONCURRENCY);
+
+  // Remotive public API (skipped with --company unless --remotive-only)
+  const remotiveCfg = config.remotive || {};
+  const remotiveOn = remotiveCfg.enabled !== false && (remotiveOnly || !filterCompany);
+  if (remotiveOn) {
+    let category = remotiveCfg.category;
+    if (category === undefined) category = 'software-dev';
+    else if (category === null || category === '') category = undefined;
+    const url = buildRemotiveUrl({
+      category,
+      search: remotiveCfg.search || undefined,
+      limit: remotiveCfg.limit,
+      company_name: remotiveCfg.company_name || undefined,
+    });
+    try {
+      if (remotiveOnly) console.log(`Request: ${url}\n`);
+      const json = await fetchJson(url);
+      const parsed = parseRemotive(json);
+
+      if (remotiveOnly) {
+        const matches = [];
+        for (const job of parsed) {
+          if (!job.url) continue;
+          if (!titleFilter(job.title)) continue;
+          const urlDup = seenUrls.has(job.url);
+          const key = `${String(job.company).toLowerCase()}::${job.title.toLowerCase()}`;
+          const roleDup = seenCompanyRoles.has(key);
+          let tag = '[new]';
+          if (urlDup) tag = '[dup url]';
+          else if (roleDup) tag = '[dup company+title]';
+          matches.push({ ...job, tag });
+        }
+        console.log(
+          `Remotive — ${matches.length} job(s) match title_filter (raw feed: ${parsed.length}, category: ${category || 'all'})\n`
+        );
+        for (const m of matches) {
+          console.log(`  ${m.tag} ${m.company} | ${m.title}`);
+          console.log(`         ${m.location || 'N/A'}`);
+          console.log(`         ${m.url}`);
+          console.log('');
+        }
+      }
+
+      ingestJobs(parsed, 'remotive-api');
+    } catch (err) {
+      errors.push({ company: 'Remotive', error: err.message });
+    }
+  }
 
   // 5. Write results
   if (!dryRun && newOffers.length > 0) {
@@ -348,7 +449,7 @@ async function main() {
   console.log(`\n${'━'.repeat(45)}`);
   console.log(`Portal Scan — ${date}`);
   console.log(`${'━'.repeat(45)}`);
-  console.log(`Companies scanned:     ${targets.length}`);
+  console.log(`ATS API scans:         ${targets.length}`);
   console.log(`Total jobs found:      ${totalFound}`);
   console.log(`Filtered by title:     ${totalFiltered} removed`);
   console.log(`Duplicates:            ${totalDupes} skipped`);

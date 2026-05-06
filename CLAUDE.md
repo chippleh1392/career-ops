@@ -280,6 +280,7 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 ## Stack and Conventions
 
 - Node.js (mjs modules), Playwright (PDF + scraping), YAML (config), HTML/CSS (template), Markdown (data), Canva MCP (optional visual CV)
+- **Gmail:** Read/search inbox via **Gmail API** in-repo (`gmail.mjs`, `gmail-tracker-audit.mjs`) — see **Gmail API (canonical — not MCP)** in `AGENTS.md`. OAuth credentials live under `private/` (gitignored).
 - Scripts in `.mjs`, configuration in YAML
 - Output in `output/` (gitignored), Reports in `reports/`
 - JDs in `jds/` (referenced as `local:jds/{file}` in pipeline.md)
