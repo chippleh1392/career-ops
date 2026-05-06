@@ -3,9 +3,8 @@
  * merge-tracker.mjs — Merge batch tracker additions into applications.md
  *
  * Handles multiple TSV formats:
- * - 9-col legacy: num\tdate\tcompany\trole\tstatus\tscore\tpdf\treport\tnotes
- * - 8-col current: num\tdate\tcompany\trole\tstatus\tscore\treport\tnotes
- * - 7-col current: num\tdate\tcompany\trole\tstatus\tscore\treport
+ * - 9-col: num\tdate\tcompany\trole\tstatus\tscore\tpdf\treport\tnotes
+ * - 8-col: num\tdate\tcompany\trole\tstatus\tscore\tpdf\treport (no notes)
  * - Pipe-delimited (markdown table row): | col | col | ... |
  *
  * Dedup: company normalized + role fuzzy match + report number match
@@ -72,11 +71,53 @@ function normalizeCompany(name) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Tokens that almost every role shares — must NOT count as signal.
+// Includes seniority, work-mode, contract, and common locations.
+const ROLE_STOPWORDS = new Set([
+  // seniority / level
+  'junior', 'mid', 'middle', 'senior', 'staff', 'principal', 'lead', 'head',
+  'chief', 'associate', 'intern', 'entry', 'level',
+  // contract / mode
+  'remote', 'hybrid', 'onsite', 'contract', 'contractor', 'freelance',
+  'fulltime', 'parttime', 'permanent', 'temporary', 'intern', 'internship',
+  // generic job words
+  'role', 'position', 'opportunity', 'team', 'based',
+  // very common locations (extend in portals.yml later if needed)
+  'bangalore', 'bengaluru', 'mumbai', 'delhi', 'hyderabad', 'pune', 'chennai',
+  'london', 'berlin', 'paris', 'madrid', 'barcelona', 'amsterdam', 'dublin',
+  'york', 'francisco', 'seattle', 'boston', 'austin', 'chicago', 'toronto',
+  'tokyo', 'singapore', 'sydney', 'melbourne', 'lisbon', 'warsaw',
+  // regions / countries
+  'europe', 'emea', 'apac', 'latam', 'americas', 'india', 'spain', 'germany',
+  'france', 'italy', 'canada', 'brazil', 'mexico', 'japan',
+  // prepositions leaking through length filter
+  'with', 'from', 'into', 'over', 'this', 'that',
+]);
+
+function roleTokens(s) {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !ROLE_STOPWORDS.has(w));
+}
+
 function roleFuzzyMatch(a, b) {
-  const wordsA = a.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const wordsB = b.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const overlap = wordsA.filter(w => wordsB.some(wb => wb.includes(w) || w.includes(wb)));
-  return overlap.length >= 2;
+  const wordsA = roleTokens(a);
+  const wordsB = roleTokens(b);
+  if (wordsA.length === 0 || wordsB.length === 0) return false;
+
+  const setB = new Set(wordsB);
+  const overlap = wordsA.filter(w => setB.has(w)).length;
+  if (overlap === 0) return false;
+
+  // Jaccard-style ratio on content tokens. Two roles are "the same" only
+  // when the overlap dominates the smaller side — not when they just share
+  // a location + "engineer".
+  const minLen = Math.min(wordsA.length, wordsB.length);
+  const ratio = overlap / minLen;
+
+  return overlap >= 2 && ratio >= 0.6;
 }
 
 function extractReportNum(reportStr) {
@@ -91,18 +132,13 @@ function parseScore(s) {
 
 function parseAppLine(line) {
   const parts = line.split('|').map(s => s.trim());
-  if (parts.length < 8) return null;
+  if (parts.length < 9) return null;
   const num = parseInt(parts[1]);
   if (isNaN(num) || num === 0) return null;
-  // 8-col table: score, status, report, notes. Legacy 9-col: …, pdf, report, notes.
-  const looksLikeReportCell = (s) => /^\[\d+\]\(reports\//.test((s || '').trim());
-  const hasPdfColumn = looksLikeReportCell(parts[8]) && !looksLikeReportCell(parts[7]);
   return {
     num, date: parts[2], company: parts[3], role: parts[4],
-    score: parts[5], status: parts[6], pdf: hasPdfColumn ? parts[7] : '—',
-    report: hasPdfColumn ? parts[8] : parts[7],
-    notes: hasPdfColumn ? parts[9] || '' : parts[8] || '',
-    raw: line,
+    score: parts[5], status: parts[6], pdf: parts[7], report: parts[8],
+    notes: parts[9] || '', raw: line,
   };
 }
 
@@ -120,11 +156,11 @@ function parseTsvContent(content, filename) {
   // Detect pipe-delimited (markdown table row)
   if (content.startsWith('|')) {
     parts = content.split('|').map(s => s.trim()).filter(Boolean);
-    if (parts.length < 7) {
+    if (parts.length < 8) {
       console.warn(`⚠️  Skipping malformed pipe-delimited ${filename}: ${parts.length} fields`);
       return null;
     }
-    const hasPdfColumn = parts.length >= 8;
+    // Format: num | date | company | role | score | status | pdf | report | notes
     addition = {
       num: parseInt(parts[0]),
       date: parts[1],
@@ -132,14 +168,14 @@ function parseTsvContent(content, filename) {
       role: parts[3],
       score: parts[4],
       status: validateStatus(parts[5]),
-      pdf: hasPdfColumn ? parts[6] : '—',
-      report: hasPdfColumn ? parts[7] : parts[6],
-      notes: hasPdfColumn ? parts[8] || '' : parts[7] || '',
+      pdf: parts[6],
+      report: parts[7],
+      notes: parts[8] || '',
     };
   } else {
     // Tab-separated
     parts = content.split('\t');
-    if (parts.length < 7) {
+    if (parts.length < 8) {
       console.warn(`⚠️  Skipping malformed TSV ${filename}: ${parts.length} fields`);
       return null;
     }
@@ -168,8 +204,6 @@ function parseTsvContent(content, filename) {
       statusCol = col4; scoreCol = col5;
     }
 
-    // 8-col: … status, score, report, notes — 9-col legacy adds pdf before report
-    const hasPdfColumn = parts.length >= 9;
     addition = {
       num: parseInt(parts[0]),
       date: parts[1],
@@ -177,9 +211,9 @@ function parseTsvContent(content, filename) {
       role: parts[3],
       status: validateStatus(statusCol),
       score: scoreCol,
-      pdf: hasPdfColumn ? parts[6] : '—',
-      report: hasPdfColumn ? parts[7] : parts[6],
-      notes: hasPdfColumn ? parts[8] || '' : parts[7] || '',
+      pdf: parts[6],
+      report: parts[7],
+      notes: parts[8] || '',
     };
   }
 
@@ -282,7 +316,7 @@ for (const file of tsvFiles) {
       console.log(`🔄 Update: #${duplicate.num} ${addition.company} — ${addition.role} (${oldScore}→${newScore})`);
       const lineIdx = appLines.indexOf(duplicate.raw);
       if (lineIdx >= 0) {
-        const updatedLine = `| ${duplicate.num} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${duplicate.status} | ${addition.report} | Re-eval ${addition.date} (${oldScore}→${newScore}). ${addition.notes} |`;
+        const updatedLine = `| ${duplicate.num} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${duplicate.status} | ${duplicate.pdf} | ${addition.report} | Re-eval ${addition.date} (${oldScore}→${newScore}). ${addition.notes} |`;
         appLines[lineIdx] = updatedLine;
         updated++;
       }
@@ -295,7 +329,7 @@ for (const file of tsvFiles) {
     const entryNum = addition.num > maxNum ? addition.num : ++maxNum;
     if (addition.num > maxNum) maxNum = addition.num;
 
-    const newLine = `| ${entryNum} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${addition.status} | ${addition.report} | ${addition.notes} |`;
+    const newLine = `| ${entryNum} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${addition.status} | ${addition.pdf} | ${addition.report} | ${addition.notes} |`;
     newLines.push(newLine);
     added++;
     console.log(`➕ Add #${entryNum}: ${addition.company} — ${addition.role} (${addition.score})`);

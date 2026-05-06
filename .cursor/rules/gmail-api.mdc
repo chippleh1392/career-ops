@@ -1,0 +1,11 @@
+---
+description: Gmail for career-ops — use repo Gmail API scripts, not MCP
+globs:
+  - "**/*.md"
+---
+
+# Gmail in this workspace
+
+Use the **Gmail API** via project scripts (`gmail.mjs`, `npm run gmail:search`, `gmail-tracker-audit.mjs`). Do **not** use Gmail MCP or assume IDE Gmail tools exist.
+
+Details: see `AGENTS.md` → **Gmail API (canonical — not MCP)**.

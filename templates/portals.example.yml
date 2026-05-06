@@ -98,6 +98,15 @@ title_filter:
     - "Head"
     - "Director"
 
+# -- Remotive (optional) --
+# scan.mjs calls https://remotive.com/api/remote-jobs when enabled (no API key).
+# Remotive recommends only a few GETs per day. Set category: "" for all categories (large payload).
+# Optional keys: search, limit, company_name (see Remotive API docs).
+
+remotive:
+  enabled: true
+  category: software-dev
+
 # -- Search queries --
 # Each query triggers a WebSearch. Use site: to filter by portal.
 # The scanner extracts title, URL, and company from results.
