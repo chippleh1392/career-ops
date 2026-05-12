@@ -7,13 +7,93 @@ source: [eliassen-recruiter, public-research, user-context, dom-research-2026-04
 role: Frontend Engineer (React)
 recruiter: Eliassen Group — Haley Foxworth
 likely_interviewer: Anthony Trama
-updated: 2026-04-24
+updated: 2026-05-06
 
 ## Pipeline log
 
+- **2026-05-06** — Haley shared prior-candidate interview pattern: **behavioral + scenario + React/JavaScript fundamentals**, **no live coding** in this round.
+- **2026-05-06** — Real interview confirmed for **2026-05-08**. Tracker status moved to **Interview**.
 - **2026-04-24** — Recruiter screen (Haley / Eliassen); company confirmed **American Specialty Health**.
 - **~1h after** — Jobvite email from **Amanda Lawrence–VIA Technical** (`notification@jobvite.com`): **EEO / equal-opportunity compliance** form. ASH is a **federal contractor**; form is for **compliance records**, not for hiring decisions (per their notice). **Complete Form** in Jobvite is expected at this stage.
 - **Recruiter:** next step = interview with **“Anthony”** (dev/manager; “very nice”) — **confirmed** as **Anthony Trama** via LinkedIn (see below).
+
+---
+
+## 5/8 interview checklist (real interview)
+
+### 24 hours before
+
+- Re-read this dossier once (focus on **Tier 1**, your **angles**, and **questions to ask**).
+- Prepare a **60-second intro**: React + accessibility + performance + cross-functional delivery.
+- Pick **3 STAR stories** to tell clearly:
+  - accessibility quality bar / WCAG or 508-minded implementation
+  - reusable component / design-system contribution
+  - performance win with measured impact (or concrete proxy)
+- Confirm logistics with recruiter if missing: interviewer names, duration, platform, timezone.
+
+### 60 minutes before
+
+- Open notes with:
+  - your intro
+  - 3 STAR bullets (problem, action, result)
+  - 5 questions from the “Questions to ask” section
+- Test camera/mic and internet; join link early.
+- Keep the role constraints handy: remote state eligibility, comp band, direct-hire confirmation.
+
+### During interview
+
+- Lead with product thinking and quality: user impact, maintainability, a11y, and performance.
+- Be explicit on testing approach (RTL/Jest patterns, not trivia).
+- Clarify stack reality: React/TS version, MUI usage, routing/state/testing standards, greenfield vs migration.
+- Confirm team model and growth path: embedded FE across product teams, coaching/mentorship expectations.
+
+### Confirmed likely format and prompts (from recruiter)
+
+- **Round format:** mixed **behavioral + scenario-based + React/JavaScript fundamentals**
+- **No live coding** expected in this round
+
+Likely behavioral/scenario prompts:
+
+- Tell me about yourself
+- What did you achieve in your last project?
+- What are your strengths?
+- What are your weaknesses?
+- How do you collaborate in a remote setting?
+- How do you manage priorities?
+- Explain accessibility: tools and what you achieved
+- Explain SEO: tools and what you achieved
+- Explain performance: tools and what you achieved
+
+Likely technical fundamentals prompts:
+
+- React fundamentals: components, diff/reconciliation, libraries/ecosystem, HOC, lifecycle methods, hooks, performance techniques
+- JavaScript fundamentals
+
+### Two-day prep priority based on confirmed format
+
+1. **Behavioral + scenario reps (high priority):**
+   - Prepare 6 concise stories: intro, project impact, strengths, weakness/growth, remote collaboration, prioritization.
+2. **Quality pillars with proof (high priority):**
+   - Accessibility, SEO, and performance answers should include:
+     - what problem existed
+     - what tools/metrics you used
+     - what changed after your work
+3. **React fundamentals refresh (high priority):**
+   - Components, props/state ownership, reconciliation, hooks, effect boundaries, legacy lifecycle/HOC awareness.
+4. **JavaScript fundamentals refresh (high priority):**
+   - async/event loop, closures, object/array/reference behavior, DOM event propagation.
+5. **De-prioritize for this round:**
+   - Live coding drills, heavy algorithm prep, deep framework trivia beyond practical React/JS fundamentals.
+
+### After interview (same day)
+
+- Add 5-10 bullets here:
+  - what they emphasized technically
+  - what went well / where to sharpen
+  - any risks (comp, level, location, stack mismatch)
+  - next step + expected timeline
+- Update `data/applications.md` notes with dated line if status changes.
+- Add/refresh ASH-specific stories in `interview-prep/story-bank.md`.
 
 ---
 
