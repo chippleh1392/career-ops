@@ -4,7 +4,7 @@
 **Sources:** Haley’s forwarded **prior-candidate panel notes** (two write-ups) + her earlier **topic checklist** (behavioral + a11y/SEO/perf + React/JS fundamentals).  
 **Created:** 2026-05-11.
 
-**Related docs:** [Panelist dossier](./american-specialty-health-panelist-dossier-2026-05-11.md) · [Main ASH prep](./american-specialty-health-frontend-engineer.md) · [Question bank](./american-specialty-health-frontend-engineer-question-bank.md) · **Life OS handbook:** [React debugging in practice](../../life-os/life-os/knowledge/frontend/react-debugging/index.md) (hooks, keys, Network-first triage, deploy skew — matches prior-candidate “fix React + DevTools” notes below)
+**Related docs:** [Panelist dossier](./american-specialty-health-panelist-dossier-2026-05-11.md) · [Main ASH prep](./american-specialty-health-frontend-engineer.md) · [Question bank](./american-specialty-health-frontend-engineer-question-bank.md) · [Behavioral Q&A](./american-specialty-health-behavioral-qa-2026-05-14.md) · **Life OS handbook:** [React debugging in practice](../../life-os/life-os/knowledge/frontend/react-debugging/index.md) (hooks, keys, Network-first triage, deploy skew — matches prior-candidate “fix React + DevTools” notes below)
 
 ---
 

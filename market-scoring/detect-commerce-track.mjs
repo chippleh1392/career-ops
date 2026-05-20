@@ -27,6 +27,10 @@ export function isCommerceShopifyTrack(job, fullTextLower) {
   const c = String(job.company ?? "").toLowerCase();
   const f = String(fullTextLower ?? "");
 
+  // Primary market title (most common on LinkedIn / agency boards)
+  if (/\bshopify\s+developer\b/.test(t)) {
+    return true;
+  }
   if (/\bshopify\b/.test(t)) {
     return true;
   }

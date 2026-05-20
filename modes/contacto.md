@@ -1,53 +1,53 @@
-# Modo: contacto -- LinkedIn Power Move
+# Mode: contacto — LinkedIn Power Move
 
-1. **Identificar targets** via WebSearch:
-   - Hiring manager del equipo
-   - Recruiter asignado
-   - 2-3 peers del equipo (gente con rol similar)
-   - Interviewer (si el candidato ya tiene entrevista programada)
+1. **Identify targets** via WebSearch:
+   - Hiring manager for the team
+   - Assigned recruiter
+   - 2–3 peers on the team (people in similar roles)
+   - Interviewer (if the candidate already has a scheduled interview)
 
-2. **Clasificar tipo de contacto** -- preguntar al candidato o inferir del contexto:
-   - **Recruiter** -- persona cuyo rol es talent acquisition, sourcing, o recruiting
-   - **Hiring Manager** -- la persona que lidera el equipo que contrata
-   - **Peer** -- alguien con un rol similar en el equipo (referral indirecto)
-   - **Interviewer** -- alguien que va a entrevistar al candidato (fecha conocida)
+2. **Classify contact type** — ask the user or infer from context:
+   - **Recruiter** — talent acquisition, sourcing, or recruiting
+   - **Hiring Manager** — leads the hiring team
+   - **Peer** — similar role on the team (indirect referral)
+   - **Interviewer** — will interview the candidate (date known)
 
-3. **Seleccionar target primario**: la persona que mas se beneficiaria de que el candidato estuviera alli
+3. **Pick primary target**: whoever benefits most from the candidate being there
 
-4. **Generar mensaje** con framework de 3 frases adaptado al tipo de contacto:
+4. **Draft message** with a 3-sentence framework adapted to contact type:
 
    ### Recruiter
-   - **Frase 1 (Fit)**: Criterios de match directo -- rol, experiencia relevante, disponibilidad o ubicacion
-   - **Frase 2 (Prueba)**: Dato que responda sus preguntas de screening antes de que las hagan (ej: "5 years building ML pipelines, currently in Berlin, available immediately")
-   - **Frase 3 (CTA)**: "Happy to share my CV if this aligns with what you're looking for"
+   - **Line 1 (fit):** Direct match criteria — role, relevant experience, availability or location
+   - **Line 2 (proof):** Data that answers screening questions early (e.g. "5 years building ML pipelines, currently in Berlin, available immediately")
+   - **Line 3 (CTA):** "Happy to share my CV if this aligns with what you're looking for"
 
    ### Hiring Manager
-   - **Frase 1 (Gancho)**: Reto especifico que enfrenta su equipo (extraido del JD, company blog, o noticias)
-   - **Frase 2 (Prueba)**: Mayor logro cuantificable del candidato que demuestre que ha resuelto problemas similares
-   - **Frase 3 (CTA)**: "Would love to hear how your team is approaching [reto especifico]"
+   - **Line 1 (hook):** Specific challenge their team faces (from JD, company blog, or news)
+   - **Line 2 (proof):** Candidate's strongest quantified win showing they've solved similar problems
+   - **Line 3 (CTA):** "Would love to hear how your team is approaching [specific challenge]"
 
    ### Peer (referral)
-   - **Frase 1 (Interes)**: Referencia genuina a su trabajo -- blog post, charla, proyecto open source, o publicacion
-   - **Frase 2 (Conexion)**: Algo que el candidato esta haciendo en el mismo espacio (NO un pitch de empleo)
-   - **Frase 3 (CTA)**: "I've been working on similar problems at [empresa], would love to hear your take on [tema]"
-   - **Nota**: NO pedir empleo. La referral ocurre naturalmente si la conversacion fluye.
+   - **Line 1 (interest):** Genuine reference to their work — blog, talk, OSS, or publication
+   - **Line 2 (connection):** Something the candidate is doing in the same space (NOT a job pitch)
+   - **Line 3 (CTA):** "I've been working on similar problems at [company], would love to hear your take on [topic]"
+   - **Note:** Do NOT ask for a job. Referral happens naturally if the conversation flows.
 
-   ### Interviewer (pre-entrevista)
-   - **Frase 1 (Research)**: Referencia a algo especifico de su trabajo o trayectoria
-   - **Frase 2 (Contexto)**: Conexion ligera con la experiencia del candidato en ese tema
-   - **Frase 3 (CTA)**: "Looking forward to our conversation on [fecha]"
-   - **Nota**: Tono ligero, no desesperado. El objetivo es que sepan que te preparaste.
+   ### Interviewer (pre-interview)
+   - **Line 1 (research):** Reference to something specific about their work or path
+   - **Line 2 (context):** Light tie to the candidate's experience on that topic
+   - **Line 3 (CTA):** "Looking forward to our conversation on [date]"
+   - **Note:** Light tone, not desperate. Goal is showing you prepared.
 
-5. **Versiones**:
+5. **Versions**:
    - EN (default)
-   - ES (si empresa espanola)
+   - ES (if the company is Spanish-speaking)
 
-6. **Targets alternativos** con justificacion de por que son buenos second choices
+6. **Alternate targets** with why they're good second choices
 
-**Reglas del mensaje:**
-- Maximo 300 caracteres (LinkedIn connection request limit)
+**Message rules:**
+- Max 300 characters (LinkedIn connection request limit)
 - NO corporate-speak
 - NO "I'm passionate about..."
-- Algo que haga que quieran responder
-- NUNCA compartir telefono
-- El tipo de contacto cambia el ENFASIS, no la estructura
+- Something that makes them want to reply
+- NEVER share phone number
+- Contact type changes emphasis, not structure

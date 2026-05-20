@@ -308,7 +308,7 @@ ${evaluationText.replace(/---SCORE_SUMMARY---[\s\S]*?---END_SUMMARY---/, '').tri
 
     // Append tracker entry reminder
     console.log(`\n📊  Tracker entry (add to data/applications.md):`);
-    console.log(`    | ${num} | ${today} | ${company} | ${role} | ${score} | Evaluada | ❌ | [${num}](reports/${filename}) |`);
+    console.log(`    | ${num} | ${today} | ${company} | ${role} | ${score} | Evaluated | ❌ | [${num}](reports/${filename}) |`);
   } catch (err) {
     console.warn(`⚠️   Could not save report: ${err.message}`);
   }

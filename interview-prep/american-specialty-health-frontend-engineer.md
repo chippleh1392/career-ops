@@ -1,7 +1,7 @@
 ---
 
 ## type: company-dossier
-status: active
+status: rejected
 companies: [American Specialty Health]
 source: [eliassen-recruiter, public-research, user-context, dom-research-2026-04]
 role: Frontend Engineer (React)
@@ -11,6 +11,9 @@ updated: 2026-05-06
 
 ## Pipeline log
 
+- **2026-05-20** — **Rejected.** Haley (Eliassen): ASH moving forward with other candidates. Recruiter cited **unit testing** as likely differentiator (“I think what it came down to”). Treat as **third-hand signal**, not confirmed HM debrief — see **Outcome** below. Tracker #76 → `Rejected`.
+- **2026-05-18** — Final round completed (live coding + behavioral; debrief to Haley). Ivana said 1–2 days for follow-up.
+- **2026-05-14** — Panel round completed; debrief to Haley: strong behavioral + JS; gaps on React + unit testing.
 - **2026-05-06** — Haley shared prior-candidate interview pattern: **behavioral + scenario + React/JavaScript fundamentals**, **no live coding** in this round.
 - **2026-05-06** — Real interview confirmed for **2026-05-08**. Tracker status moved to **Interview**.
 - **2026-04-24** — Recruiter screen (Haley / Eliassen); company confirmed **American Specialty Health**.
@@ -100,6 +103,30 @@ Likely technical fundamentals prompts:
 # American Specialty Health (ASH) — Frontend / React (Eliassen pipeline)
 
 Dossier for interviews and follow-ups. **Verify** anything time-sensitive (postings, reorgs) on [ashcompanies.com](https://www.ashcompanies.com) and with your recruiter.
+
+---
+
+## Outcome (2026-05-20) — rejection + how to read recruiter feedback
+
+**Result:** ASH chose other candidates after **three interview rounds** (recruiter screen → technical/panel → final with live coding).
+
+**What Haley relayed:** Unit testing — “I **think** what it came down to.” That wording is **speculative**, not a written HM scorecard.
+
+**Why your skepticism is reasonable:**
+
+| Observation | What it usually means |
+|-------------|----------------------|
+| Gap disclosed **before** round 1; Haley said **nice-to-have / not a big deal** | Recruiters optimize to **fill the funnel**; HM may still care but won’t kill at screen |
+| Gap raised again in **round 2**; you said **ramp, not expert**; they still scheduled **round 3** | Not a **hard veto** mid-process — more “flag to revisit if we have a close call” |
+| **Round 3** was another **live coding** round (not the light “env walkthrough” Haley expected) | Format mismatch suggests **internal process ≠ recruiter brief** — same risk for **rejection reasons** |
+| Your debriefs: behavioral + JS **strong**; React + unit testing **smaller gaps**; finals **OK, not perfect** | Likely **bundle**: technical depth + testing culture vs **another finalist**, not one checkbox |
+| Corporate line: “**other candidates**” | Standard; rarely the full truth |
+
+**Most plausible synthesis (not provable):** Unit testing was probably a **tie-breaker / differentiator among finalists**, not the reason you got three rounds. Haley likely got a **short, polite reason** from Ivana/ASH (or account manager) optimized for **relationship preservation** — easier to say “testing bar” than “we liked someone else’s panel + coding signals more.” That does **not** mean Haley invented it; it may be **over-weighted** in retelling.
+
+**Was it wasted time?** Frustrating, but common: companies run full loops to **rank multiple candidates** and only compare **holistically at the end**. Early disclosure rarely short-circuits unless it’s a **must-have** they won’t flex (and their behavior showed flex).
+
+**Takeaway for next loops:** When you disclose a ramp gap upfront, ask explicitly: “Is this a **must-have day one** or **learn-on-the-job**?” Log the answer. After round 2, if the same theme returns, ask “Does this block advancing, or is it a development area?” — reduces surprise at rejection.
 
 ---
 

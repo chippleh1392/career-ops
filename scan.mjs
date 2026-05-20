@@ -130,6 +130,7 @@ function parseRemotive(json) {
     url: j.url || '',
     company: j.company_name || '',
     location: j.candidate_required_location || '',
+    description: j.description || '',
   }));
 }
 
@@ -151,7 +152,10 @@ async function fetchJson(url) {
 
 function buildTitleFilter(titleFilter) {
   const positive = (titleFilter?.positive || []).map(k => k.toLowerCase());
-  const negative = (titleFilter?.negative || []).map(k => k.toLowerCase());
+  const negative = [
+    ...(titleFilter?.negative || []),
+    ...(titleFilter?.seniority_penalty || []),
+  ].map(k => k.toLowerCase());
 
   return (title) => {
     const lower = title.toLowerCase();
@@ -172,6 +176,77 @@ function buildTitleFilterFromConfig(config) {
   return buildTitleFilter(tf);
 }
 
+/**
+ * At commerce_lane employers (Yotpo, Lazer, …): accept general FE titles without
+ * seniority_penalty, but keep commerce/general stack negatives (Backend, Staff+, …).
+ */
+function buildCommerceEmployerFilter(tf) {
+  if (!tf?.commerce || !tf?.general) {
+    return buildTitleFilter(tf);
+  }
+  const seenPos = new Set();
+  const seenNeg = new Set();
+  const positive = [];
+  const negative = [];
+  for (const k of [...(tf.commerce.positive || []), ...(tf.general.positive || [])]) {
+    const key = String(k).toLowerCase();
+    if (!seenPos.has(key)) {
+      seenPos.add(key);
+      positive.push(k);
+    }
+  }
+  for (const k of [...(tf.commerce.negative || []), ...(tf.general.negative || [])]) {
+    const key = String(k).toLowerCase();
+    if (!seenNeg.has(key)) {
+      seenNeg.add(key);
+      negative.push(k);
+    }
+  }
+  return buildTitleFilter({ positive, negative });
+}
+
+const REMOTIVE_ROLE_RE =
+  /\b(developer|engineer|frontend|front[- ]end|full[- ]?stack|web developer|web engineer|architect)\b/i;
+
+const REMOTIVE_DESC_ROLE_RE =
+  /\b(shopify\s+developer|shopify\s+engineer|shopify\s+web\s+developer|frontend|front[- ]end|full[- ]?stack|web developer|web engineer|ecommerce developer|e-?commerce developer)\b/i;
+
+const REMOTIVE_DESC_ROLE_BLOCK_RE =
+  /\b(devops|sre|backend|back[- ]end|data engineer|ml engineer|machine learning|platform engineer|infrastructure|security engineer|mobile developer|ios|android)\b/i;
+
+function buildRemotiveCommerceFilter(config, titleFilter) {
+  const tf = config.title_filter ?? {};
+  const descKeywords = (
+    config.remotive?.description_positive ?? [
+      'shopify',
+      'shopify plus',
+      'liquid',
+      'hydrogen',
+      'storefront api',
+      'checkout extensibility',
+      'oxygen',
+      'headless commerce',
+      'ecommerce platform',
+    ]
+  ).map((k) => String(k).toLowerCase());
+  // Description-based Shopify matches are Lane A — do not apply general seniority_penalty.
+  const descNegatives = [
+    ...(tf.commerce?.negative || []),
+    ...(tf.general?.negative || []),
+  ].map((k) => String(k).toLowerCase());
+
+  return (job) => {
+    if (titleFilter(job.title)) return true;
+    const title = job.title || '';
+    if (!REMOTIVE_DESC_ROLE_RE.test(title)) return false;
+    if (REMOTIVE_DESC_ROLE_BLOCK_RE.test(title)) return false;
+    const lower = title.toLowerCase();
+    if (descNegatives.some((k) => lower.includes(k))) return false;
+    const desc = String(job.description || '').toLowerCase();
+    return descKeywords.some((k) => desc.includes(k));
+  };
+}
+
 // ── Dedup ───────────────────────────────────────────────────────────
 
 function loadSeenUrls() {
@@ -186,11 +261,14 @@ function loadSeenUrls() {
     }
   }
 
-  // pipeline.md — extract URLs from checkbox lines
+  // pipeline.md — extract URLs from checkbox lines (incl. `#55 | https://...` processed rows)
   if (existsSync(PIPELINE_PATH)) {
     const text = readFileSync(PIPELINE_PATH, 'utf-8');
-    for (const match of text.matchAll(/- \[[ x]\] (https?:\/\/\S+)/g)) {
-      seen.add(match[1]);
+    for (const line of text.split('\n')) {
+      if (!/^- \[[ x]\]/.test(line)) continue;
+      for (const match of line.matchAll(/https?:\/\/[^\s|)]+/g)) {
+        seen.add(match[0]);
+      }
     }
   }
 
@@ -228,28 +306,35 @@ function loadSeenCompanyRoles() {
 
 // ── Pipeline writer ─────────────────────────────────────────────────
 
+const PIPELINE_PENDING_HEADERS = ['## Pending', '## Pendientes', '## Pendentes'];
+const PIPELINE_PROCESSED_HEADERS = ['## Processed', '## Procesadas', '## Processadas'];
+const PIPELINE_PENDING_WRITE = '## Pending';
+
+function findPipelineSection(text, headers) {
+  for (const header of headers) {
+    const idx = text.indexOf(header);
+    if (idx !== -1) return { header, idx, len: header.length };
+  }
+  return null;
+}
+
 function appendToPipeline(offers) {
   if (offers.length === 0) return;
 
   let text = readFileSync(PIPELINE_PATH, 'utf-8');
+  const pending = findPipelineSection(text, PIPELINE_PENDING_HEADERS);
+  const processed = findPipelineSection(text, PIPELINE_PROCESSED_HEADERS);
 
-  // Find "## Pendientes" section and append after it
-  const marker = '## Pendientes';
-  const idx = text.indexOf(marker);
-  if (idx === -1) {
-    // No Pendientes section — append at end before Procesadas
-    const procIdx = text.indexOf('## Procesadas');
-    const insertAt = procIdx === -1 ? text.length : procIdx;
-    const block = `\n${marker}\n\n` + offers.map(o =>
+  if (!pending) {
+    const insertAt = processed ? processed.idx : text.length;
+    const block = `\n${PIPELINE_PENDING_WRITE}\n\n` + offers.map(o =>
       `- [ ] ${o.url} | ${o.company} | ${o.title}`
     ).join('\n') + '\n\n';
     text = text.slice(0, insertAt) + block + text.slice(insertAt);
   } else {
-    // Find the end of existing Pendientes content (next ## or end)
-    const afterMarker = idx + marker.length;
+    const afterMarker = pending.idx + pending.len;
     const nextSection = text.indexOf('\n## ', afterMarker);
     const insertAt = nextSection === -1 ? text.length : nextSection;
-
     const block = '\n' + offers.map(o =>
       `- [ ] ${o.url} | ${o.company} | ${o.title}`
     ).join('\n') + '\n';
@@ -313,6 +398,11 @@ async function main() {
   const config = parseYaml(readFileSync(PORTALS_PATH, 'utf-8'));
   const companies = config.tracked_companies || [];
   const titleFilter = buildTitleFilterFromConfig(config);
+  const commerceEmployerFilter =
+    config.title_filter?.commerce && config.title_filter?.general
+      ? buildCommerceEmployerFilter(config.title_filter)
+      : titleFilter;
+  const remotiveCommerceFilter = buildRemotiveCommerceFilter(config, titleFilter);
 
   // 2. Filter to enabled companies with detectable APIs
   let targets = companies
@@ -355,11 +445,11 @@ async function main() {
   const newOffers = [];
   const errors = [];
 
-  function ingestJobs(jobs, source) {
+  function ingestJobs(jobs, source, { filter = titleFilter } = {}) {
     totalFound += jobs.length;
     for (const job of jobs) {
       if (!job.url) continue;
-      if (!titleFilter(job.title)) {
+      if (!filter(job)) {
         totalFiltered++;
         continue;
       }
@@ -380,10 +470,13 @@ async function main() {
 
   const tasks = targets.map((company) => async () => {
     const { type, url } = company._api;
+    const filter = company.commerce_lane ? commerceEmployerFilter : titleFilter;
     try {
       const json = await fetchJson(url);
       const jobs = PARSERS[type](json, company.name);
-      ingestJobs(jobs, `${type}-api`);
+      ingestJobs(jobs, `${type}-api`, {
+        filter: (job) => filter(job.title),
+      });
     } catch (err) {
       errors.push({ company: company.name, error: err.message });
     }
@@ -413,7 +506,7 @@ async function main() {
         const matches = [];
         for (const job of parsed) {
           if (!job.url) continue;
-          if (!titleFilter(job.title)) continue;
+          if (!remotiveCommerceFilter(job)) continue;
           const urlDup = seenUrls.has(job.url);
           const key = `${String(job.company).toLowerCase()}::${job.title.toLowerCase()}`;
           const roleDup = seenCompanyRoles.has(key);
@@ -433,7 +526,7 @@ async function main() {
         }
       }
 
-      ingestJobs(parsed, 'remotive-api');
+      ingestJobs(parsed, 'remotive-api', { filter: remotiveCommerceFilter });
     } catch (err) {
       errors.push({ company: 'Remotive', error: err.message });
     }
